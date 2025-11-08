@@ -1,5 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
+/**
+ * Configuration Supabase centralisée
+ * 
+ * Tous les composants doivent utiliser le client `supabase` exporté depuis ce fichier
+ * au lieu de créer leur propre client. Cela garantit l'utilisation cohérente des
+ * variables d'environnement configurées dans Vercel :
+ * - NEXT_PUBLIC_SUPABASE_URL
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY
+ * 
+ * @see env.example pour la configuration des variables d'environnement
+ */
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 

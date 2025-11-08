@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
-import { getUserRole } from '@/lib/user-role'
 import type { User } from '@supabase/supabase-js'
 
 interface ProfileData {
@@ -82,15 +81,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      console.log('AuthContext: loadUserRole - Calling getUserRole...')
+      console.log('AuthContext: loadUserRole - Fetching role for user', currentUser.id)
+      
+      // Timeout de sécurité : 2 secondes maximum
+      const timeoutPromise = new Promise<'admin' | 'participant' | null>((resolve) => {
+        setTimeout(() => {
+          console.warn('AuthContext: loadUserRole - Timeout reached, defaulting to participant')
+          resolve('participant')
+        }, 2000)
+      })
+
+      const queryPromise = (async () => {
+        try {
+          console.log('AuthContext: loadUserRole - Starting query for user', currentUser.id)
+          
+          // Créer un AbortController pour annuler la requête si nécessaire
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => {
+            console.warn('AuthContext: loadUserRole - AbortController timeout triggered')
+            controller.abort()
+          }, 2000)
+          
+          console.log('AuthContext: loadUserRole - Executing query...')
+          const startTime = Date.now()
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', currentUser.id)
+            .single()
+          const queryTime = Date.now() - startTime
+          console.log(`AuthContext: loadUserRole - Query completed in ${queryTime}ms`)
+          
+          clearTimeout(timeoutId)
+          console.log('AuthContext: loadUserRole - Query result - data:', data, 'error:', error)
+
+          if (error) {
+            console.warn('AuthContext: loadUserRole - Error fetching role:', error.code, error.message)
+            // Si la table n'existe pas ou l'utilisateur n'a pas de profil, retourner participant par défaut
+            if (error.code === 'PGRST116' || error.code === '42P01') {
+              console.log('AuthContext: loadUserRole - Profile not found, defaulting to participant')
+              return 'participant' as 'admin' | 'participant' | null
+            }
+            // Si erreur RLS ou autre, retourner participant par défaut
+            if (error.code === '42501' || error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy') || error.message?.includes('RLS') || error.message?.includes('row-level security')) {
+              console.warn('AuthContext: loadUserRole - RLS/permission error, defaulting to participant. Error:', error.message)
+              console.warn('AuthContext: loadUserRole - Pour corriger, exécutez supabase/fix_profiles_rls.sql dans votre dashboard Supabase')
+              return 'participant' as 'admin' | 'participant' | null
+            }
+            // Log toutes les autres erreurs pour déboguer
+            console.error('AuthContext: loadUserRole - Unexpected error:', error)
+            return 'participant' as 'admin' | 'participant' | null // Par défaut
+          }
+
+          if (!data) {
+            console.log('AuthContext: loadUserRole - No data returned, defaulting to participant')
+            return 'participant' as 'admin' | 'participant' | null
+          }
+
+          const role = (data.role as 'admin' | 'participant' | null) || 'participant'
+          console.log('AuthContext: loadUserRole - Role found:', role)
+          return role
+        } catch (queryError: any) {
+          console.error('AuthContext: loadUserRole - Query exception:', queryError)
+          return 'participant' as 'admin' | 'participant' | null
+        }
+      })()
+
+      // Utiliser Promise.race pour avoir un timeout
       const startTime = Date.now()
-      const role = await getUserRole(currentUser)
+      const role = await Promise.race([queryPromise, timeoutPromise])
       const roleTime = Date.now() - startTime
-      console.log(`AuthContext: loadUserRole - getUserRole completed in ${roleTime}ms, role:`, role)
+      console.log(`AuthContext: loadUserRole - Completed in ${roleTime}ms, role:`, role)
       setUserRole(role)
       console.log('AuthContext: loadUserRole - Role set successfully')
-    } catch (error) {
-      console.error('AuthContext: loadUserRole - Exception:', error)
+    } catch (e) {
+      console.error('AuthContext: loadUserRole - Exception:', e)
       setUserRole('participant') // Par défaut
     }
   }, [])
@@ -123,6 +188,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('AuthContext: loadProfile - Profile not found (PGRST116)')
           setProfile(null)
           return
+        }
+        // Si erreur RLS, logger un avertissement mais continuer
+        if (profileError.code === '42501' || profileError.code === 'PGRST301' || profileError.message?.includes('permission') || profileError.message?.includes('policy') || profileError.message?.includes('RLS') || profileError.message?.includes('row-level security')) {
+          console.warn('AuthContext: loadProfile - RLS/permission error. Pour corriger, exécutez supabase/fix_profiles_rls.sql dans votre dashboard Supabase')
         }
         console.warn('AuthContext: loadProfile - Other error, setting profile to null')
         setProfile(null)

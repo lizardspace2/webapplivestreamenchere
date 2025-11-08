@@ -211,10 +211,17 @@ export default function ProfilePage() {
         })
         console.error('Profile: handleSubmit - Full error object:', error)
         
-        // Si erreur RLS, donner un message plus clair
-        if (error.code === '42501' || error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy') || error.message?.includes('RLS')) {
+        // Si erreur RLS, donner un message plus clair avec instructions
+        if (error.code === '42501' || error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy') || error.message?.includes('RLS') || error.message?.includes('row-level security')) {
           console.error('Profile: handleSubmit - RLS/permission error detected')
-          showError('Erreur de permissions. Vérifiez que les politiques RLS sont correctement configurées dans Supabase.')
+          showError(
+            'Erreur de permissions RLS. ' +
+            'Exécutez le script supabase/fix_profiles_rls.sql dans votre dashboard Supabase ' +
+            'pour désactiver temporairement RLS et permettre l\'accès à la table profiles.'
+          )
+        } else if (error.code === 'PGRST116') {
+          console.error('Profile: handleSubmit - Not found error')
+          showError('Profil non trouvé. Veuillez réessayer.')
         } else {
           console.error('Profile: handleSubmit - Other error type')
           showError(error.message || 'Erreur lors de la sauvegarde du profil')
