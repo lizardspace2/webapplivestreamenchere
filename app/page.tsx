@@ -13,28 +13,64 @@ export default function HomePage() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Rediriger selon le rôle
+  // Rediriger selon le rôle avec timeout de sécurité
   useEffect(() => {
+    let mounted = true
+    let redirectTimeout: NodeJS.Timeout
+
+    // Timeout de sécurité : rediriger après 2 secondes maximum
+    redirectTimeout = setTimeout(() => {
+      if (mounted) {
+        console.log('Timeout reached, redirecting to auction')
+        setLoading(false)
+        router.replace('/auction')
+      }
+    }, 2000)
+
     async function checkAndRedirect() {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
+        console.log('Checking user and role...')
+        const { data: { user }, error: authError } = await supabase.auth.getUser()
+        
+        if (authError) {
+          console.warn('Auth error:', authError)
+        }
+        
+        if (!mounted) return
+        
         setUser(user)
         
+        // Rediriger immédiatement vers /auction par défaut
+        let targetRoute = '/auction'
+        
         if (user) {
-          const role = await getUserRole(user)
-          if (role === 'admin') {
-            router.push('/admin')
-          } else {
-            router.push('/auction')
+          console.log('User found, checking role...', user.id)
+          try {
+            const role = await getUserRole(user)
+            console.log('User role:', role)
+            if (role === 'admin') {
+              targetRoute = '/admin'
+            }
+          } catch (roleError) {
+            console.error('Error getting role:', roleError)
+            // En cas d'erreur, on reste sur /auction
           }
         } else {
-          router.push('/auction')
+          console.log('No user, redirecting to auction')
         }
-      } catch (e) {
-        console.warn('Failed to check user:', e)
-        router.push('/auction')
-      } finally {
+        
+        if (!mounted) return
+        
+        // Annuler le timeout car on redirige maintenant
+        clearTimeout(redirectTimeout)
         setLoading(false)
+        router.replace(targetRoute)
+      } catch (e) {
+        console.error('Failed to check user:', e)
+        if (!mounted) return
+        clearTimeout(redirectTimeout)
+        setLoading(false)
+        router.replace('/auction')
       }
     }
 
@@ -42,20 +78,31 @@ export default function HomePage() {
 
     // Écouter les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return
+      console.log('Auth state changed:', _event)
       setUser(session?.user ?? null)
+      
+      let targetRoute = '/auction'
       if (session?.user) {
-        const role = await getUserRole(session.user)
-        if (role === 'admin') {
-          router.push('/admin')
-        } else {
-          router.push('/auction')
+        try {
+          const role = await getUserRole(session.user)
+          if (role === 'admin') {
+            targetRoute = '/admin'
+          }
+        } catch (e) {
+          console.error('Error getting role on auth change:', e)
         }
-      } else {
-        router.push('/auction')
       }
+      
+      if (!mounted) return
+      clearTimeout(redirectTimeout)
+      setLoading(false)
+      router.replace(targetRoute)
     })
 
     return () => {
+      mounted = false
+      clearTimeout(redirectTimeout)
       subscription.unsubscribe()
     }
   }, [router])

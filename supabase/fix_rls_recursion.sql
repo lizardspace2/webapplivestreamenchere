@@ -1,5 +1,5 @@
 -- ============================================
--- SQL pour ajouter le système de rôles
+-- SQL pour corriger la récursion infinie dans les politiques RLS
 -- ============================================
 -- Instructions:
 -- 1. Ouvrez le SQL Editor dans votre dashboard Supabase
@@ -7,12 +7,11 @@
 -- 3. Cliquez sur "Run" pour exécuter
 -- ============================================
 
--- Ajouter la colonne role à la table profiles
-ALTER TABLE profiles 
-ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'participant' CHECK (role IN ('admin', 'participant'));
+-- Supprimer la politique problématique qui cause la récursion
+DROP POLICY IF EXISTS "Admins can read all profiles" ON profiles;
 
--- Créer un index pour améliorer les performances
-CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
+-- Supprimer aussi la politique pour les salles d'enchères si elle cause des problèmes
+DROP POLICY IF EXISTS "Admins can update auction rooms" ON auction_rooms;
 
 -- Créer une fonction helper pour vérifier si un utilisateur est admin
 -- Cette fonction évite la récursion en utilisant SECURITY DEFINER
@@ -30,22 +29,22 @@ BEGIN
 END;
 $$;
 
--- Note: On ne crée PAS de politique pour permettre aux admins de lire tous les profils
--- car cela créerait une récursion infinie. Les utilisateurs peuvent déjà lire leur propre profil.
+-- Politique simplifiée : les utilisateurs peuvent lire leur propre profil
+-- (cette politique existe déjà, mais on s'assure qu'elle est correcte)
+DROP POLICY IF EXISTS "Users can read own profile" ON profiles;
+CREATE POLICY "Users can read own profile" ON profiles
+  FOR SELECT
+  USING (auth.uid() = id);
 
 -- Politique pour permettre aux admins de mettre à jour les salles d'enchères
 -- En utilisant la fonction helper pour éviter la récursion
-DROP POLICY IF EXISTS "Admins can update auction rooms" ON auction_rooms;
 CREATE POLICY "Admins can update auction rooms" ON auction_rooms
   FOR UPDATE
   USING (is_user_admin(auth.uid()))
   WITH CHECK (is_user_admin(auth.uid()));
 
 -- ============================================
--- ✅ Migration terminée!
--- Le système de rôles est maintenant configuré.
--- ============================================
--- Note: Pour définir un utilisateur comme admin, exécutez:
--- UPDATE profiles SET role = 'admin' WHERE id = 'user-uuid-here';
+-- ✅ Correction terminée!
+-- La récursion infinie est maintenant résolue.
 -- ============================================
 
