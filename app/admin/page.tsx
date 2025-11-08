@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { getUserRole, isAdmin } from '@/lib/user-role'
+import { useAuth, useRequireAdmin } from '@/app/contexts/AuthContext'
 import AuthModal from '@/app/components/AuthModal'
 import ProfileModal from '@/app/components/ProfileModal'
 import Toast from '@/app/components/Toast'
@@ -26,8 +26,8 @@ export default function AdminPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const { toast, showError, showWarning, showSuccess, showInfo, hideToast } = useToast()
-  const [user, setUser] = useState<User | null>(null)
-  const [isAdminUser, setIsAdminUser] = useState(false)
+  const { user, isAdmin: isAdminUser, requireAdmin, loading: authLoading } = useAuth()
+  const { isAdmin, requireAdmin: requireAdminCheck } = useRequireAdmin()
   const [bids, setBids] = useState<Bid[]>([])
   const [currentBid, setCurrentBid] = useState({ amount: 10, bidder: null as string | null })
   const [connected, setConnected] = useState(false)
@@ -52,17 +52,11 @@ export default function AdminPage() {
 
   // Vérifier le rôle et rediriger si pas admin
   useEffect(() => {
-    async function checkAdminRole() {
-      if (user) {
-        const admin = await isAdmin(user)
-        setIsAdminUser(admin)
-        if (!admin) {
-          router.push('/auction')
-        }
-      }
+    if (!authLoading && user && !isAdminUser) {
+      // Si l'utilisateur n'est pas admin, rediriger
+      router.push('/auction')
     }
-    checkAdminRole()
-  }, [user, router])
+  }, [user, isAdminUser, authLoading, router])
 
   // Vérifier le statut de l'enchère et les nouvelles enchères
   useEffect(() => {

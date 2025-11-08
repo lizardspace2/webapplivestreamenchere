@@ -49,7 +49,15 @@ const countryList = [
 export default function ProfilePage() {
   const router = useRouter()
   const { toast, showError, showSuccess, hideToast } = useToast()
-  const { user, loading: authLoading, signOut: authSignOut } = useAuth()
+  const { 
+    user, 
+    profile: contextProfile,
+    loading: authLoading, 
+    signOut: authSignOut,
+    refreshProfile,
+    isAuthenticated,
+    requireAuth
+  } = useAuth()
   const [saving, setSaving] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -95,16 +103,45 @@ export default function ProfilePage() {
     }
   }
 
-  // Charger le profil quand l'utilisateur change
+  // Charger le profil depuis le contexte ou depuis la base de données
   useEffect(() => {
     if (user) {
-      loadProfile(user.id)
+      // Si le contexte a déjà un profil, l'utiliser
+      if (contextProfile) {
+        // Extraire le code pays du numéro de téléphone si présent
+        let phoneCountryCode = '+33'
+        let phoneNumber = contextProfile.phone_number || ''
+        
+        // Si le numéro commence par un code pays, l'extraire
+        if (phoneNumber && phoneNumber.startsWith('+')) {
+          const match = phoneNumber.match(/^(\+\d{1,3})/)
+          if (match) {
+            phoneCountryCode = match[1]
+            phoneNumber = phoneNumber.substring(match[1].length).trim()
+          }
+        }
+        
+        setProfileData({
+          first_name: contextProfile.first_name || '',
+          last_name: contextProfile.last_name || '',
+          address: contextProfile.address || '',
+          postal_code: contextProfile.postal_code || '',
+          city: contextProfile.city || '',
+          country: contextProfile.country || 'France',
+          additional_info: '', // Pas dans le contexte pour l'instant
+          phone_country_code: phoneCountryCode,
+          phone_number: phoneNumber,
+        })
+      } else {
+        // Sinon, charger depuis la base de données
+        loadProfile(user.id)
+      }
       setIsAuthModalOpen(false)
     } else if (!authLoading) {
       // Si le chargement est terminé et qu'il n'y a pas d'utilisateur, ouvrir le modal
       setIsAuthModalOpen(true)
     }
-  }, [user, authLoading])
+  }, [user, contextProfile, authLoading])
 
   function handleInputChange(field: keyof ProfileData, value: string) {
     setProfileData((prev) => ({ ...prev, [field]: value }))
@@ -152,6 +189,8 @@ export default function ProfilePage() {
       }
 
       console.log('Profile saved successfully:', data)
+      // Rafraîchir le profil dans le contexte
+      await refreshProfile()
       showSuccess('Profil mis à jour avec succès!')
     } catch (err: any) {
       console.error('Error saving profile:', err)
