@@ -99,6 +99,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (user) {
       loadProfile(user.id)
+      setIsAuthModalOpen(false)
     } else if (!authLoading) {
       // Si le chargement est terminé et qu'il n'y a pas d'utilisateur, ouvrir le modal
       setIsAuthModalOpen(true)
