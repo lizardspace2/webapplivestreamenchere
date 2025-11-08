@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { LIVEPEER_CONFIG } from '@/lib/livepeer'
 import type { User } from '@supabase/supabase-js'
 import Hls from 'hls.js'
@@ -31,6 +31,7 @@ export default function LiveAuctionPage() {
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [auctionEndsAt] = useState<Date | null>(null) // Set this to enable timer
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false)
 
   const room = 'auction-room'
   const startingPrice = 10
@@ -93,13 +94,18 @@ export default function LiveAuctionPage() {
     return `${mm}m ${ss}s`
   }
 
+  // Vérifier la configuration Supabase au montage
+  useEffect(() => {
+    setSupabaseConfigured(isSupabaseConfigured())
+  }, [])
+
   // Supabase auth and realtime
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function init() {
       // Vérifier que Supabase est configuré
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      if (!isSupabaseConfigured()) {
         console.warn('Supabase not configured')
         return
       }
@@ -267,6 +273,24 @@ export default function LiveAuctionPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <div className="max-w-7xl mx-auto">
+        {!supabaseConfigured && (
+          <div className="bg-red-50 border-2 border-red-300 rounded-2xl shadow-xl p-6 mb-4">
+            <h2 className="text-xl font-bold text-red-800 mb-2">⚠️ Configuration Supabase requise</h2>
+            <p className="text-red-700 mb-4">
+              Supabase n'est pas configuré. Veuillez créer un fichier <code className="bg-red-100 px-2 py-1 rounded">.env.local</code> à la racine du projet avec vos credentials.
+            </p>
+            <div className="bg-white p-4 rounded-lg border border-red-200">
+              <p className="text-sm font-semibold text-gray-800 mb-2">Ajoutez ces variables dans <code>.env.local</code> :</p>
+              <pre className="text-xs bg-gray-50 p-3 rounded overflow-x-auto">
+{`NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_supabase`}
+              </pre>
+            </div>
+            <p className="text-sm text-red-600 mt-4">
+              📖 Consultez <code>env.example</code> ou <code>DEPLOYMENT.md</code> pour plus de détails.
+            </p>
+          </div>
+        )}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-gray-800">Enchères Live Stream</h1>
