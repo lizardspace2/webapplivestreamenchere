@@ -2,13 +2,34 @@
 
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { Inter } from 'next/font/google'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import GlobalAuthModal from './components/GlobalAuthModal'
 import AuthModal from './components/AuthModal'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+/**
+ * Composant global qui gère tous les modaux et composants globaux
+ * Centralise la gestion de l'authentification globale
+ */
+function AppComponents() {
+  const router = useRouter()
+  const { shouldShowAuth, setShouldShowAuth, loading } = useAuth()
+
+  // Modal d'authentification global
+  if (loading || !shouldShowAuth) {
+    return null
+  }
+
+  return (
+    <AuthModal
+      modalId="global-auth-modal"
+      isOpen={shouldShowAuth}
+      onClose={() => {
+        setShouldShowAuth(false)
+        router.push('/auction')
+      }}
+    />
+  )
+}
 
 /**
  * Composant de routage et redirection basé sur l'authentification
@@ -73,18 +94,16 @@ interface AppProps {
 
 /**
  * Composant principal de l'application
- * Centralise tous les providers, le layout et la logique globale
+ * Centralise tous les providers, le layout, le routage et les composants globaux
  */
 export default function App({ children }: AppProps) {
   return (
-    <div className={inter.className}>
-      <AuthProvider>
-        <AppRouter>
-          {children}
-        </AppRouter>
-        <GlobalAuthModal />
-      </AuthProvider>
-    </div>
+    <AuthProvider>
+      <AppRouter>
+        {children}
+      </AppRouter>
+      <AppComponents />
+    </AuthProvider>
   )
 }
 
