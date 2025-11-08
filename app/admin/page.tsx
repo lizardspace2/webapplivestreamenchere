@@ -426,12 +426,20 @@ export default function AdminPage() {
                   <div className="text-xs text-gray-500">Commissaire-Priseur</div>
                 </div>
               </div>
-              <button
-                onClick={signOut}
-                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium text-sm transition-colors border border-red-200"
-              >
-                Se déconnecter
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium text-sm transition-colors border border-blue-200"
+                >
+                  Mon profil
+                </button>
+                <button
+                  onClick={signOut}
+                  className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium text-sm transition-colors border border-red-200"
+                >
+                  Se déconnecter
+                </button>
+              </div>
             </div>
           ) : (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
