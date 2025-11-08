@@ -120,17 +120,38 @@ export default function ProfilePage() {
     setSaving(true)
 
     try {
-      const { error } = await supabase
+      console.log('Saving profile for user:', user.id)
+      console.log('Profile data:', profileData)
+      
+      const profileToSave = {
+        id: user.id,
+        first_name: profileData.first_name || null,
+        last_name: profileData.last_name || null,
+        address: profileData.address || null,
+        postal_code: profileData.postal_code || null,
+        city: profileData.city || null,
+        country: profileData.country || 'France',
+        additional_info: profileData.additional_info || null,
+        phone_country_code: profileData.phone_country_code || '+33',
+        phone_number: profileData.phone_number.replace(/\s/g, '') || null,
+        updated_at: new Date().toISOString(),
+      }
+
+      console.log('Profile to save:', profileToSave)
+
+      const { data, error } = await supabase
         .from('profiles')
-        .upsert({
-          id: user.id,
-          ...profileData,
-          phone_number: profileData.phone_number.replace(/\s/g, ''),
-          updated_at: new Date().toISOString(),
+        .upsert(profileToSave, {
+          onConflict: 'id',
         })
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
 
+      console.log('Profile saved successfully:', data)
       showSuccess('Profil mis à jour avec succès!')
     } catch (err: any) {
       console.error('Error saving profile:', err)
@@ -428,6 +449,7 @@ export default function ProfilePage() {
 
       {/* Auth Modal - affiché si pas d'utilisateur */}
       <AuthModal
+        modalId="profile-auth-modal"
         isOpen={isAuthModalOpen && !user}
         onClose={() => {
           if (user) {

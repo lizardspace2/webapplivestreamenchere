@@ -19,6 +19,7 @@ export default function GlobalAuthModal() {
 
   return (
     <AuthModal
+      modalId="global-auth-modal"
       isOpen={shouldShowAuth}
       onClose={() => {
         setShouldShowAuth(false)

@@ -43,6 +43,7 @@ export default function HomePage() {
 
       {/* Modal de connexion si nécessaire */}
       <AuthModal
+        modalId="home-auth-modal"
         isOpen={shouldShowAuth && !loading}
         onClose={() => {
           setShouldShowAuth(false)

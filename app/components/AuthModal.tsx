@@ -9,9 +9,10 @@ interface AuthModalProps {
   isOpen: boolean
   onClose: () => void
   onAuthSuccess?: (user: User) => void
+  modalId?: string // ID unique pour éviter les conflits
 }
 
-export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onAuthSuccess, modalId = 'auth-modal' }: AuthModalProps) {
   const { refreshUser } = useAuth()
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
@@ -215,7 +216,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
               {/* Email Field */}
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor={`${modalId}-email`}
                   className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
                   Adresse e-mail
@@ -235,7 +236,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                     </svg>
                   </div>
                   <input
-                    id="email"
+                    id={`${modalId}-email`}
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -250,7 +251,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
               {/* Password Field */}
               <div>
                 <label
-                  htmlFor="password"
+                  htmlFor={`${modalId}-password`}
                   className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
                   Mot de passe
@@ -270,7 +271,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
                     </svg>
                   </div>
                   <input
-                    id="password"
+                    id={`${modalId}-password`}
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
