@@ -33,13 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Timeout pour éviter les blocages
-      const timeoutPromise = new Promise<'participant'>((resolve) => {
-        setTimeout(() => resolve('participant'), 3000)
-      })
-
-      const rolePromise = getUserRole(currentUser)
-      const role = await Promise.race([rolePromise, timeoutPromise])
+      // getUserRole a déjà son propre timeout, mais on ajoute une sécurité supplémentaire
+      const role = await getUserRole(currentUser)
       setUserRole(role)
     } catch (error) {
       console.error('Failed to load user role:', error)
