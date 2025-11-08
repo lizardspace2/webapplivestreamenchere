@@ -73,6 +73,25 @@ npm run preview
 
 Le dossier `dist/` contiendra les fichiers statiques à déployer sur votre hébergeur préféré (Vercel, Netlify, etc.).
 
+### 7. Déploiement sur Vercel
+
+Le projet est configuré pour Vercel avec `vercel.json`. Assurez-vous que :
+
+1. **Dans les paramètres du projet Vercel** :
+   - Framework Preset : **"Other"** (pas Next.js)
+   - Build Command : `npm run build`
+   - Output Directory : `dist`
+   - Install Command : `npm install`
+
+2. **Variables d'environnement** (avec préfixe `VITE_`) :
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_LIVEPEER_STREAM_ID` (optionnel)
+   - `VITE_LIVEPEER_PLAYBACK_ID` (optionnel)
+   - `VITE_LIVEPEER_PLAYBACK_URL` (optionnel)
+
+3. **Important** : Si Vercel détecte encore Next.js, allez dans **Settings > General > Framework Preset** et sélectionnez **"Other"** manuellement.
+
 ## 📊 Structure de la base de données
 
 ### Table `bids`
