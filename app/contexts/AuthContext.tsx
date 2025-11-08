@@ -241,22 +241,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         console.log('AuthContext: Initializing auth...')
         
+        // Attendre un peu pour que Supabase initialise complètement
+        // Cela permet au client de charger la session depuis localStorage
+        await new Promise(resolve => setTimeout(resolve, 100))
+        
         // Essayer d'abord de récupérer la session depuis le storage
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        // getSession() récupère la session depuis localStorage de manière synchrone
+        // C'est la méthode recommandée pour récupérer une session persistée
+        let { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        console.log('AuthContext: Session from storage:', session ? 'found' : 'not found', session?.user?.email)
         
         if (sessionError) {
           console.warn('AuthContext: Session error:', sessionError)
         }
         
-        // Si pas de session, essayer getUser
+        // Si la session existe mais est expirée, Supabase devrait la rafraîchir automatiquement
+        // Vérifier si la session est valide
+        if (session && session.expires_at) {
+          const expiresAt = new Date(session.expires_at * 1000)
+          const now = new Date()
+          if (expiresAt < now) {
+            console.log('AuthContext: Session expired, attempting refresh...')
+            // Essayer de rafraîchir la session
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+            if (!refreshError && refreshedSession) {
+              session = refreshedSession
+              console.log('AuthContext: Session refreshed successfully')
+            } else {
+              console.warn('AuthContext: Failed to refresh session:', refreshError)
+              session = null
+            }
+          }
+        }
+        
+        // Si on a une session, utiliser l'utilisateur de la session
         let user = session?.user ?? null
+        
+        // Si pas de session dans le storage, essayer getUser qui peut récupérer depuis le serveur
+        // Cela peut fonctionner si le token est encore valide côté serveur
         if (!user) {
+          console.log('AuthContext: No session in storage, trying getUser...')
           const { data: { user: fetchedUser }, error: authError } = await supabase.auth.getUser()
           if (authError) {
             console.warn('AuthContext: Auth error:', authError)
-            setError(authError.message)
+            // Ne pas définir d'erreur si c'est juste "pas d'utilisateur" ou token invalide
+            if (authError.message !== 'User not found' && 
+                authError.message !== 'Invalid Refresh Token' &&
+                !authError.message.includes('JWT')) {
+              setError(authError.message)
+            }
           }
           user = fetchedUser
+          console.log('AuthContext: User from getUser:', user ? 'found' : 'not found', user?.email)
         }
         
         if (!mounted) return
@@ -295,18 +332,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth()
 
     // Écouter les changements d'authentification
+    // Cet écouteur se déclenche automatiquement quand la session change
+    // Il est important pour détecter les changements de session (connexion, déconnexion, refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return
       
       console.log('AuthContext: Auth state changed:', event)
       console.log('AuthContext: Session:', session ? 'exists' : 'null', session?.user?.id, session?.user?.email)
+      
       const currentUser = session?.user ?? null
       console.log('AuthContext: Setting user:', currentUser?.id, currentUser?.email)
+      
+      // Mettre à jour l'utilisateur immédiatement
       setUser(currentUser)
       setError(null)
-      setShouldShowAuth(false)
       
       if (currentUser) {
+        // Si on a un utilisateur, ne pas afficher le modal d'auth
+        setShouldShowAuth(false)
         console.log('AuthContext: Loading role and profile for user:', currentUser.id)
         // Charger le rôle et le profil en parallèle
         try {
@@ -324,8 +367,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('AuthContext: No user in session, clearing role and profile')
         setUserRole(null)
         setProfile(null)
+        // Si déconnexion, ne pas afficher le modal d'auth
         if (event === 'SIGNED_OUT') {
           setShouldShowAuth(false)
+        } else if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+          // Si refresh ou connexion mais pas d'utilisateur, c'est étrange
+          console.warn('AuthContext: Event', event, 'but no user in session')
         }
       }
     })
@@ -335,7 +382,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(loadingTimeout)
       subscription.unsubscribe()
     }
-  }, [loadUserRole, loadProfile])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // loadUserRole et loadProfile sont stables grâce à useCallback
 
   // Déconnexion
   const signOut = useCallback(async () => {

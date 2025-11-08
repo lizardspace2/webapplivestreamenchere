@@ -3,12 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { LIVEPEER_CONFIG } from '@/lib/livepeer'
+import { useAuth } from '@/app/contexts/AuthContext'
 import AuthModal from '@/app/components/AuthModal'
 import ProfileModal from '@/app/components/ProfileModal'
 import Toast from '@/app/components/Toast'
 import { useToast } from '@/app/hooks/useToast'
-import { getUserRole } from '@/lib/user-role'
-import type { User } from '@supabase/supabase-js'
 import Hls from 'hls.js'
 import { useRouter } from 'next/navigation'
 
@@ -27,8 +26,7 @@ export default function AuctionPage() {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const { toast, showError, showWarning, showSuccess, hideToast } = useToast()
-  const [user, setUser] = useState<User | null>(null)
-  const [userRole, setUserRole] = useState<'admin' | 'participant' | null>(null)
+  const { user, userRole, isAdmin } = useAuth()
   const [bids, setBids] = useState<Bid[]>([])
   const [currentBid, setCurrentBid] = useState({ amount: 10, bidder: null as string | null })
   const [bidAmount, setBidAmount] = useState('')
@@ -82,22 +80,16 @@ export default function AuctionPage() {
     setSupabaseConfigured(isSupabaseConfigured())
   }, [])
 
-  // Vérifier le rôle et rediriger si admin
+  // Rediriger si admin
   useEffect(() => {
-    async function checkRole() {
-      if (user) {
-        const role = await getUserRole(user)
-        setUserRole(role)
-        if (role === 'admin') {
-          router.push('/admin')
-        }
-      }
+    if (user && isAdmin) {
+      router.push('/admin')
     }
-    checkRole()
-  }, [user, router])
+  }, [user, isAdmin, router])
 
-  // Supabase auth and realtime
+  // Supabase realtime subscriptions
   useEffect(() => {
+    let mounted = true
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function init() {
@@ -106,26 +98,11 @@ export default function AuctionPage() {
         return
       }
 
-      // Get current user
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
-        if (user) {
-          await checkProfileComplete(user.id)
-        }
-      } catch (e) {
-        console.warn('Failed to get user', e)
+      // L'utilisateur est maintenant géré par le contexte AuthContext
+      // Vérifier le profil complet si l'utilisateur est disponible
+      if (user) {
+        await checkProfileComplete(user.id)
       }
-
-      // Auth state change listener
-      supabase.auth.onAuthStateChange(async (_event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await checkProfileComplete(session.user.id)
-        } else {
-          setProfileComplete(false)
-        }
-      })
 
       // Subscribe to auction room status
       const roomChannel = supabase

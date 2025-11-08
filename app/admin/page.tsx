@@ -38,7 +38,7 @@ export default function AdminPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [profileComplete, setProfileComplete] = useState(false)
-  const [autoCloseTimer, setAutoCloseTimer] = useState<NodeJS.Timeout | null>(null)
+  const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   const room = 'auction-room'
   const startingPrice = 10
@@ -60,15 +60,26 @@ export default function AdminPage() {
 
   // Vérifier le profil complet quand l'utilisateur change
   useEffect(() => {
-    if (user) {
-      checkProfileComplete(user.id)
-    } else {
-      setProfileComplete(false)
+    let mounted = true
+    
+    async function checkProfile() {
+      if (user && mounted) {
+        await checkProfileComplete(user.id)
+      } else if (mounted) {
+        setProfileComplete(false)
+      }
+    }
+    
+    checkProfile()
+    
+    return () => {
+      mounted = false
     }
   }, [user])
 
   // Vérifier le statut de l'enchère et les nouvelles enchères
   useEffect(() => {
+    let mounted = true
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function init() {
@@ -76,6 +87,8 @@ export default function AdminPage() {
         console.warn('Supabase not configured')
         return
       }
+
+      if (!mounted) return
 
       // L'utilisateur est maintenant géré par le contexte AuthContext
       // Le profil complet est vérifié dans un useEffect séparé
@@ -92,6 +105,7 @@ export default function AdminPage() {
             filter: `name=eq.${room}`,
           },
           (payload) => {
+            if (!mounted) return
             const roomData = payload.new as { status: 'active' | 'paused' | 'ended' }
             setAuctionStatus(roomData.status)
           }
@@ -110,6 +124,7 @@ export default function AdminPage() {
             filter: `room=eq.${room}`,
           },
           (payload) => {
+            if (!mounted) return
             const newBid = payload.new as Bid
             setBids((prev) => [...prev, newBid])
             setCurrentBid((current) =>
@@ -123,7 +138,9 @@ export default function AdminPage() {
           }
         )
         .subscribe((status) => {
-          setConnected(status === 'SUBSCRIBED')
+          if (mounted) {
+            setConnected(status === 'SUBSCRIBED')
+          }
         })
 
       // Initial fetch of auction room status
@@ -181,41 +198,64 @@ export default function AdminPage() {
     init()
 
     return () => {
+      mounted = false
       if (channel) {
         supabase.removeChannel(channel)
       }
-      if (autoCloseTimer) {
-        clearTimeout(autoCloseTimer)
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current)
+        autoCloseTimerRef.current = null
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, startingPrice])
 
+  // Fonction pour fermer l'enchère (sans confirmation pour le timer automatique)
+  const closeAuctionWithoutConfirm = useCallback(async () => {
+    try {
+      const { error } = await supabase
+        .from('auction_rooms')
+        .update({ status: 'ended', ends_at: new Date().toISOString() })
+        .eq('name', room)
+
+      if (error) throw error
+      setAuctionStatus('ended')
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current)
+        autoCloseTimerRef.current = null
+      }
+      showSuccess('Vente aux enchères clôturée automatiquement après 30 secondes sans enchère!')
+    } catch (err: any) {
+      console.error('Failed to close auction:', err)
+      showError(err.message || 'Erreur lors de la clôture')
+    }
+  }, [room, showSuccess, showError])
+
   // Timer de clôture automatique
-  function resetAutoCloseTimer() {
-    if (autoCloseTimer) {
-      clearTimeout(autoCloseTimer)
+  const resetAutoCloseTimer = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current)
+      autoCloseTimerRef.current = null
     }
 
     if (auctionStatus === 'active') {
-      const timer = setTimeout(() => {
-        handleCloseAuction()
+      autoCloseTimerRef.current = setTimeout(() => {
+        closeAuctionWithoutConfirm()
       }, AUTO_CLOSE_DELAY)
-      setAutoCloseTimer(timer)
     }
-  }
+  }, [auctionStatus, closeAuctionWithoutConfirm])
 
   useEffect(() => {
     if (auctionStatus === 'active' && lastBidTime) {
       resetAutoCloseTimer()
     }
     return () => {
-      if (autoCloseTimer) {
-        clearTimeout(autoCloseTimer)
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current)
+        autoCloseTimerRef.current = null
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auctionStatus, lastBidTime])
+  }, [auctionStatus, lastBidTime, resetAutoCloseTimer])
 
   async function handleStartStream() {
     try {
@@ -252,6 +292,12 @@ export default function AdminPage() {
       return
     }
 
+    // Annuler le timer automatique si présent
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current)
+      autoCloseTimerRef.current = null
+    }
+
     try {
       const { error } = await supabase
         .from('auction_rooms')
@@ -261,10 +307,6 @@ export default function AdminPage() {
       if (error) throw error
 
       setAuctionStatus('ended')
-      if (autoCloseTimer) {
-        clearTimeout(autoCloseTimer)
-        setAutoCloseTimer(null)
-      }
       showSuccess('Vente aux enchères clôturée avec succès!')
     } catch (err: any) {
       console.error('Failed to close auction:', err)

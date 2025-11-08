@@ -69,7 +69,9 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, modalId = 'a
 
       if (signInError) throw signInError
 
-      if (data.user) {
+      if (data.user && data.session) {
+        console.log('AuthModal: Sign in successful, session saved:', data.session.user.email)
+        // La session est automatiquement sauvegardée dans localStorage par Supabase
         // Rafraîchir l'utilisateur dans le contexte
         await refreshUser()
         // Appeler le callback si fourni
@@ -77,8 +79,11 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, modalId = 'a
           onAuthSuccess(data.user)
         }
         onClose()
+      } else {
+        throw new Error('Connexion réussie mais pas de session')
       }
     } catch (err: any) {
+      console.error('AuthModal: Sign in error:', err)
       setError(err.message || 'Erreur de connexion. Vérifiez vos identifiants.')
     } finally {
       setLoading(false)

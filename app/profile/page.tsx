@@ -105,9 +105,11 @@ export default function ProfilePage() {
 
   // Charger le profil depuis le contexte ou depuis la base de données
   useEffect(() => {
+    let mounted = true
+    
     if (user) {
       // Si le contexte a déjà un profil, l'utiliser
-      if (contextProfile) {
+      if (contextProfile && mounted) {
         // Extraire le code pays du numéro de téléphone si présent
         let phoneCountryCode = '+33'
         let phoneNumber = contextProfile.phone_number || ''
@@ -121,25 +123,32 @@ export default function ProfilePage() {
           }
         }
         
-        setProfileData({
-          first_name: contextProfile.first_name || '',
-          last_name: contextProfile.last_name || '',
-          address: contextProfile.address || '',
-          postal_code: contextProfile.postal_code || '',
-          city: contextProfile.city || '',
-          country: contextProfile.country || 'France',
-          additional_info: '', // Pas dans le contexte pour l'instant
-          phone_country_code: phoneCountryCode,
-          phone_number: phoneNumber,
-        })
-      } else {
+        if (mounted) {
+          setProfileData({
+            first_name: contextProfile.first_name || '',
+            last_name: contextProfile.last_name || '',
+            address: contextProfile.address || '',
+            postal_code: contextProfile.postal_code || '',
+            city: contextProfile.city || '',
+            country: contextProfile.country || 'France',
+            additional_info: '', // Pas dans le contexte pour l'instant
+            phone_country_code: phoneCountryCode,
+            phone_number: phoneNumber,
+          })
+          setIsAuthModalOpen(false)
+        }
+      } else if (mounted) {
         // Sinon, charger depuis la base de données
         loadProfile(user.id)
+        setIsAuthModalOpen(false)
       }
-      setIsAuthModalOpen(false)
-    } else if (!authLoading) {
+    } else if (!authLoading && mounted) {
       // Si le chargement est terminé et qu'il n'y a pas d'utilisateur, ouvrir le modal
       setIsAuthModalOpen(true)
+    }
+    
+    return () => {
+      mounted = false
     }
   }, [user, contextProfile, authLoading])
 
