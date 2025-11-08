@@ -26,7 +26,7 @@ export default function AdminPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const { toast, showError, showWarning, showSuccess, showInfo, hideToast } = useToast()
-  const { user, isAdmin: isAdminUser, requireAdmin, loading: authLoading } = useAuth()
+  const { user, isAdmin: isAdminUser, requireAdmin, loading: authLoading, signOut: authSignOut, refreshUser } = useAuth()
   const { isAdmin, requireAdmin: requireAdminCheck } = useRequireAdmin()
   const [bids, setBids] = useState<Bid[]>([])
   const [currentBid, setCurrentBid] = useState({ amount: 10, bidder: null as string | null })
@@ -58,6 +58,15 @@ export default function AdminPage() {
     }
   }, [user, isAdminUser, authLoading, router])
 
+  // Vérifier le profil complet quand l'utilisateur change
+  useEffect(() => {
+    if (user) {
+      checkProfileComplete(user.id)
+    } else {
+      setProfileComplete(false)
+    }
+  }, [user])
+
   // Vérifier le statut de l'enchère et les nouvelles enchères
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -68,26 +77,8 @@ export default function AdminPage() {
         return
       }
 
-      // Get current user
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
-        if (user) {
-          await checkProfileComplete(user.id)
-        }
-      } catch (e) {
-        console.warn('Failed to get user', e)
-      }
-
-      // Auth state change listener
-      supabase.auth.onAuthStateChange(async (_event, session) => {
-        setUser(session?.user ?? null)
-        if (session?.user) {
-          await checkProfileComplete(session.user.id)
-        } else {
-          setProfileComplete(false)
-        }
-      })
+      // L'utilisateur est maintenant géré par le contexte AuthContext
+      // Le profil complet est vérifié dans un useEffect séparé
 
       // Subscribe to auction room status
       const roomChannel = supabase
@@ -347,9 +338,12 @@ export default function AdminPage() {
     }
   }
 
-  function handleAuthSuccess(authUser: User) {
-    setUser(authUser)
-    checkProfileComplete(authUser.id)
+  async function handleAuthSuccess(authUser: User) {
+    // Rafraîchir l'utilisateur dans le contexte
+    await refreshUser()
+    if (authUser) {
+      await checkProfileComplete(authUser.id)
+    }
   }
 
   function handleProfileComplete() {
@@ -357,11 +351,10 @@ export default function AdminPage() {
     setIsProfileModalOpen(false)
   }
 
-  async function signOut() {
+  async function handleSignOut() {
     try {
       await handleStopStream()
-      await supabase.auth.signOut()
-      setUser(null)
+      await authSignOut()
       router.push('/auction')
     } catch (err) {
       console.error(err)
@@ -430,7 +423,7 @@ export default function AdminPage() {
                   Mon profil
                 </button>
                 <button
-                  onClick={signOut}
+                  onClick={handleSignOut}
                   className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium text-sm transition-colors border border-red-200"
                 >
                   Se déconnecter
