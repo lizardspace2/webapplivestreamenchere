@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { LIVEPEER_CONFIG } from '@/lib/livepeer'
 import AuthModal from '@/app/components/AuthModal'
+import ProfileModal from '@/app/components/ProfileModal'
 import type { User } from '@supabase/supabase-js'
 import Hls from 'hls.js'
 
@@ -30,6 +31,8 @@ export default function LiveAuctionPage() {
   const [auctionEndsAt] = useState<Date | null>(null) // Set this to enable timer
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+  const [profileComplete, setProfileComplete] = useState(false)
 
   const room = 'auction-room'
   const startingPrice = 10
@@ -112,13 +115,21 @@ export default function LiveAuctionPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         setUser(user)
+        if (user) {
+          await checkProfileComplete(user.id)
+        }
       } catch (e) {
         console.warn('Failed to get user', e)
       }
 
       // Auth state change listener
-      supabase.auth.onAuthStateChange((_event, session) => {
+      supabase.auth.onAuthStateChange(async (_event, session) => {
         setUser(session?.user ?? null)
+        if (session?.user) {
+          await checkProfileComplete(session.user.id)
+        } else {
+          setProfileComplete(false)
+        }
       })
 
       // Subscribe to bids table inserts for this room
@@ -224,8 +235,52 @@ export default function LiveAuctionPage() {
     }
   }
 
+  async function checkProfileComplete(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, address, postal_code, city, country, phone_number')
+        .eq('id', userId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') {
+        // PGRST116 = no rows returned, which is fine
+        console.warn('Error checking profile:', error)
+        return
+      }
+
+      // Vérifier si le profil est complet
+      const isComplete = data && 
+        data.first_name && 
+        data.last_name && 
+        data.address && 
+        data.postal_code && 
+        data.city && 
+        data.country && 
+        data.phone_number
+
+      setProfileComplete(!!isComplete)
+
+      // Ouvrir le modal si le profil n'est pas complet
+      if (!isComplete) {
+        setIsProfileModalOpen(true)
+      }
+    } catch (e) {
+      console.warn('Failed to check profile:', e)
+      // Si le profil n'existe pas, ouvrir le modal
+      setIsProfileModalOpen(true)
+    }
+  }
+
   function handleAuthSuccess(authUser: User) {
     setUser(authUser)
+    // Vérifier le profil après connexion
+    checkProfileComplete(authUser.id)
+  }
+
+  function handleProfileComplete() {
+    setProfileComplete(true)
+    setIsProfileModalOpen(false)
   }
 
   async function signOut() {
@@ -423,6 +478,21 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_supabase`}
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={handleAuthSuccess}
       />
+
+      {/* Profile Modal */}
+      {user && (
+        <ProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => {
+            // Ne pas permettre de fermer si le profil n'est pas complet
+            if (profileComplete) {
+              setIsProfileModalOpen(false)
+            }
+          }}
+          onComplete={handleProfileComplete}
+          user={user}
+        />
+      )}
     </div>
   )
 }
