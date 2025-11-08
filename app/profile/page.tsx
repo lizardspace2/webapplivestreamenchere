@@ -110,12 +110,12 @@ export default function ProfilePage() {
     if (user) {
       // Si le contexte a déjà un profil, l'utiliser
       if (contextProfile && mounted) {
-        // Extraire le code pays du numéro de téléphone si présent
-        let phoneCountryCode = '+33'
+        // Utiliser directement phone_country_code du contexte s'il existe
+        let phoneCountryCode = contextProfile.phone_country_code || '+33'
         let phoneNumber = contextProfile.phone_number || ''
         
-        // Si le numéro commence par un code pays, l'extraire
-        if (phoneNumber && phoneNumber.startsWith('+')) {
+        // Si le numéro commence par un code pays mais qu'on n'a pas phone_country_code, l'extraire
+        if (phoneNumber && phoneNumber.startsWith('+') && !contextProfile.phone_country_code) {
           const match = phoneNumber.match(/^(\+\d{1,3})/)
           if (match) {
             phoneCountryCode = match[1]
@@ -131,7 +131,7 @@ export default function ProfilePage() {
             postal_code: contextProfile.postal_code || '',
             city: contextProfile.city || '',
             country: contextProfile.country || 'France',
-            additional_info: '', // Pas dans le contexte pour l'instant
+            additional_info: contextProfile.additional_info || '',
             phone_country_code: phoneCountryCode,
             phone_number: phoneNumber,
           })

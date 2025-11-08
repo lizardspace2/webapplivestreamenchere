@@ -11,6 +11,8 @@ interface ProfileData {
   postal_code: string | null
   city: string | null
   country: string | null
+  additional_info: string | null
+  phone_country_code: string | null
   phone_number: string | null
   role: 'admin' | 'participant' | null
 }
@@ -168,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const { data, error: profileError } = await supabase
         .from('profiles')
-        .select('first_name, last_name, address, postal_code, city, country, phone_number, role')
+        .select('first_name, last_name, address, postal_code, city, country, additional_info, phone_country_code, phone_number, role')
         .eq('id', userId)
         .single()
       
@@ -207,6 +209,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           postal_code: data.postal_code,
           city: data.city,
           country: data.country,
+          additional_info: data.additional_info,
+          phone_country_code: data.phone_country_code,
           phone_number: data.phone_number,
           role: (data.role as 'admin' | 'participant') || 'participant',
         })
