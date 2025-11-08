@@ -50,9 +50,7 @@ export default function ProfilePage() {
     profile: contextProfile,
     loading: authLoading, 
     signOut: authSignOut,
-    refreshProfile,
-    isAuthenticated,
-    requireAuth
+    refreshProfile
   } = useAuth()
   const [saving, setSaving] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)

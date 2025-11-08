@@ -23,12 +23,11 @@ export default function AuctionPage() {
   const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const { toast, showError, showWarning, showSuccess, hideToast } = useToast()
-  const { user, userRole, isAdmin, signOut } = useAuth()
+  const { user, isAdmin, signOut } = useAuth()
   const [bids, setBids] = useState<Bid[]>([])
   const [currentBid, setCurrentBid] = useState({ amount: 10, bidder: null as string | null })
   const [bidAmount, setBidAmount] = useState('')
   const [connected, setConnected] = useState(false)
-  const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const [auctionStatus, setAuctionStatus] = useState<'active' | 'paused' | 'ended'>('active')
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
@@ -86,7 +85,6 @@ export default function AuctionPage() {
 
   // Supabase realtime subscriptions
   useEffect(() => {
-    let mounted = true
     let channel: ReturnType<typeof supabase.channel> | null = null
 
     async function init() {
@@ -102,7 +100,7 @@ export default function AuctionPage() {
       }
 
       // Subscribe to auction room status
-      const roomChannel = supabase
+      supabase
         .channel('auction-room-status')
         .on(
           'postgres_changes',
@@ -112,7 +110,7 @@ export default function AuctionPage() {
             table: 'auction_rooms',
             filter: `name=eq.${room}`,
           },
-          (payload) => {
+          (payload: any) => {
             const roomData = payload.new as { status: 'active' | 'paused' | 'ended' }
             setAuctionStatus(roomData.status)
           }
@@ -130,7 +128,7 @@ export default function AuctionPage() {
             table: 'bids',
             filter: `room=eq.${room}`,
           },
-          (payload) => {
+          (payload: any) => {
             const newBid = payload.new as Bid
             setBids((prev) => [...prev, newBid])
             setCurrentBid((current) =>
@@ -140,7 +138,7 @@ export default function AuctionPage() {
             )
           }
         )
-        .subscribe((status) => {
+        .subscribe((status: string) => {
           setConnected(status === 'SUBSCRIBED')
         })
 
@@ -173,8 +171,8 @@ export default function AuctionPage() {
         if (data && data.length > 0) {
           setBids(data)
           const highest = data.reduce(
-            (max, b) => (b.amount > max.amount ? b : max),
-            { amount: startingPrice, bidder: null }
+            (max: Bid, b: Bid) => (b.amount > max.amount ? b : max),
+            { id: '', room: '', amount: startingPrice, bidder: '', inserted_at: new Date().toISOString() } as Bid
           )
           setCurrentBid({ amount: highest.amount, bidder: highest.bidder })
         } else {

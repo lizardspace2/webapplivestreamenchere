@@ -405,7 +405,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Écouter les changements d'authentification
     // Cet écouteur se déclenche automatiquement quand la session change
     // Il est important pour détecter les changements de session (connexion, déconnexion, refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: any) => {
       if (!mounted) return
       
       console.log('AuthContext: Auth state changed:', event)

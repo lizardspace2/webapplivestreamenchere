@@ -1,7 +1,7 @@
 ﻿import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
-import { useAuth, useRequireAdmin } from '@/contexts/AuthContext'
+import { useAuth } from '@/contexts/AuthContext'
 import AuthModal from '@/components/AuthModal'
 import ProfileModal from '@/components/ProfileModal'
 import Toast from '@/components/Toast'
@@ -21,9 +21,8 @@ export default function AdminPage() {
   const navigate = useNavigate()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const { toast, showError, showWarning, showSuccess, showInfo, hideToast } = useToast()
-  const { user, isAdmin: isAdminUser, requireAdmin, loading: authLoading, signOut: authSignOut, refreshUser } = useAuth()
-  const { isAdmin, requireAdmin: requireAdminCheck } = useRequireAdmin()
+  const { toast, showError, showSuccess, showInfo, hideToast } = useToast()
+  const { user, isAdmin: isAdminUser, loading: authLoading, signOut: authSignOut, refreshUser } = useAuth()
   const [bids, setBids] = useState<Bid[]>([])
   const [currentBid, setCurrentBid] = useState({ amount: 10, bidder: null as string | null })
   const [connected, setConnected] = useState(false)
@@ -52,7 +51,7 @@ export default function AdminPage() {
       // Si l'utilisateur n'est pas admin, rediriger
       navigate('/auction')
     }
-  }, [user, isAdminUser, authLoading, router])
+  }, [user, isAdminUser, authLoading, navigate])
 
   // VÃ©rifier le profil complet quand l'utilisateur change
   useEffect(() => {
@@ -90,7 +89,7 @@ export default function AdminPage() {
       // Le profil complet est vÃ©rifiÃ© dans un useEffect sÃ©parÃ©
 
       // Subscribe to auction room status
-      const roomChannel = supabase
+      supabase
         .channel('auction-room-status')
         .on(
           'postgres_changes',
@@ -100,7 +99,7 @@ export default function AdminPage() {
             table: 'auction_rooms',
             filter: `name=eq.${room}`,
           },
-          (payload) => {
+          (payload: any) => {
             if (!mounted) return
             const roomData = payload.new as { status: 'active' | 'paused' | 'ended' }
             setAuctionStatus(roomData.status)
@@ -119,7 +118,7 @@ export default function AdminPage() {
             table: 'bids',
             filter: `room=eq.${room}`,
           },
-          (payload) => {
+          (payload: any) => {
             if (!mounted) return
             const newBid = payload.new as Bid
             setBids((prev) => [...prev, newBid])
@@ -133,7 +132,7 @@ export default function AdminPage() {
             resetAutoCloseTimer()
           }
         )
-        .subscribe((status) => {
+        .subscribe((status: string) => {
           if (mounted) {
             setConnected(status === 'SUBSCRIBED')
           }
@@ -178,8 +177,8 @@ export default function AdminPage() {
         if (data && data.length > 0) {
           setBids(data)
           const highest = data.reduce(
-            (max, b) => (b.amount > max.amount ? b : max),
-            { amount: startingPrice, bidder: null }
+            (max: Bid, b: Bid) => (b.amount > max.amount ? b : max),
+            { id: '', room: '', amount: startingPrice, bidder: '', inserted_at: new Date().toISOString() } as Bid
           )
           setCurrentBid({ amount: highest.amount, bidder: highest.bidder })
           setLastBidTime(new Date(data[data.length - 1].inserted_at))
