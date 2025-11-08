@@ -16,11 +16,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
   }
 }
 
-// Créer le client Supabase uniquement si les credentials sont valides
-// Sinon, créer un client avec des valeurs vides qui échouera proprement
+// Créer le client Supabase avec persistance de session
+// Utiliser localStorage pour persister la session entre les rechargements
 export const supabase = createClient(
   supabaseUrl || 'https://invalid.supabase.co',
-  supabaseAnonKey || 'invalid-key'
+  supabaseAnonKey || 'invalid-key',
+  {
+    auth: {
+      persistSession: true,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
+  }
 )
 
 // Fonction helper pour vérifier si Supabase est configuré

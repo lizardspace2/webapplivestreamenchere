@@ -184,7 +184,13 @@ export default function ProfilePage() {
         .select()
 
       if (error) {
-        console.error('Supabase error:', error)
+        console.error('Supabase error saving profile:', error.code, error.message, error.details)
+        // Si erreur RLS, donner un message plus clair
+        if (error.code === '42501' || error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy') || error.message?.includes('RLS')) {
+          showError('Erreur de permissions. Vérifiez que les politiques RLS sont correctement configurées dans Supabase.')
+        } else {
+          showError(error.message || 'Erreur lors de la sauvegarde du profil')
+        }
         throw error
       }
 

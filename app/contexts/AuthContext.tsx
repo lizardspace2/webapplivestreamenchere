@@ -216,11 +216,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function initAuth() {
       try {
         console.log('AuthContext: Initializing auth...')
-        const { data: { user }, error: authError } = await supabase.auth.getUser()
         
-        if (authError) {
-          console.warn('AuthContext: Auth error:', authError)
-          setError(authError.message)
+        // Essayer d'abord de récupérer la session depuis le storage
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.warn('AuthContext: Session error:', sessionError)
+        }
+        
+        // Si pas de session, essayer getUser
+        let user = session?.user ?? null
+        if (!user) {
+          const { data: { user: fetchedUser }, error: authError } = await supabase.auth.getUser()
+          if (authError) {
+            console.warn('AuthContext: Auth error:', authError)
+            setError(authError.message)
+          }
+          user = fetchedUser
         }
         
         if (!mounted) return
@@ -229,12 +241,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(user)
         
         if (user) {
+          console.log('AuthContext: User found:', user.id, user.email)
           // Charger le rôle et le profil en parallèle pour de meilleures performances
           await Promise.all([
             loadUserRole(user),
             loadProfile(user.id)
           ])
         } else {
+          console.log('AuthContext: No user found')
           // Pas d'utilisateur, proposer la connexion
           setShouldShowAuth(true)
         }
