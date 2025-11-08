@@ -448,7 +448,7 @@ export default function ProfileModal({ isOpen, onClose, onComplete, user }: Prof
             {currentStep === 3 && (
               <div className="space-y-6">
                 <p className="text-gray-700">
-                  Veuillez renseigner votre numéro de téléphone. Un code d'activation sera envoyé sur votre téléphone mobile afin de confirmer votre identité.
+                  Veuillez renseigner votre numéro de téléphone. Un code d&apos;activation sera envoyé sur votre téléphone mobile afin de confirmer votre identité.
                 </p>
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">

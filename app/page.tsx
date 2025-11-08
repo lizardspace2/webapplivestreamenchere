@@ -299,7 +299,7 @@ export default function LiveAuctionPage() {
           <div className="bg-red-50 border-2 border-red-300 rounded-2xl shadow-xl p-6 mb-4">
             <h2 className="text-xl font-bold text-red-800 mb-2">⚠️ Configuration Supabase requise</h2>
             <p className="text-red-700 mb-4">
-              Supabase n'est pas configuré. Veuillez créer un fichier <code className="bg-red-100 px-2 py-1 rounded">.env.local</code> à la racine du projet avec vos credentials.
+              Supabase n&apos;est pas configuré. Veuillez créer un fichier <code className="bg-red-100 px-2 py-1 rounded">.env.local</code> à la racine du projet avec vos credentials.
             </p>
             <div className="bg-white p-4 rounded-lg border border-red-200">
               <p className="text-sm font-semibold text-gray-800 mb-2">Ajoutez ces variables dans <code>.env.local</code> :</p>
