@@ -25,7 +25,7 @@ export default function AdminPage() {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const { toast, showError, showWarning, showSuccess, hideToast } = useToast()
+  const { toast, showError, showWarning, showSuccess, showInfo, hideToast } = useToast()
   const [user, setUser] = useState<User | null>(null)
   const [isAdminUser, setIsAdminUser] = useState(false)
   const [bids, setBids] = useState<Bid[]>([])
@@ -203,6 +203,7 @@ export default function AdminPage() {
         clearTimeout(autoCloseTimer)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, startingPrice])
 
   // Timer de clôture automatique
@@ -228,6 +229,7 @@ export default function AdminPage() {
         clearTimeout(autoCloseTimer)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auctionStatus, lastBidTime])
 
   async function handleStartStream() {
