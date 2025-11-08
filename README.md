@@ -1,6 +1,6 @@
 # 🎥 Enchères Live Stream
 
-Application web d'enchères en direct avec streaming vidéo en temps réel, authentification Supabase et déploiement Vercel.
+Application web d'enchères en direct avec streaming vidéo en temps réel, authentification Supabase, construite avec React TypeScript et Vite.
 
 ## ✨ Fonctionnalités
 
@@ -9,13 +9,13 @@ Application web d'enchères en direct avec streaming vidéo en temps réel, auth
 - 🔐 **Authentification** complète avec Supabase
 - ⚡ **Temps réel** via Supabase Realtime
 - 🎨 **Interface moderne** avec Tailwind CSS
-- 🚀 **Déploiement facile** sur Vercel
+- 🚀 **Build rapide** avec Vite
 
 ## 🚀 Déploiement rapide
 
 ### 1. Prérequis
 
-- Compte [Vercel](https://vercel.com)
+- Node.js 18+ et npm
 - Compte [Supabase](https://supabase.com)
 - Compte [Livepeer](https://livepeer.com) (optionnel pour diffuser)
 
@@ -36,20 +36,17 @@ Pour diffuser (optionnel), vous aurez besoin d'une clé API Livepeer.
 
 ### 4. Configuration des variables d'environnement
 
-Créez un fichier `.env.local` à la racine du projet :
+Créez un fichier `.env` à la racine du projet :
 
 ```env
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=votre_url_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_supabase
+VITE_SUPABASE_URL=votre_url_supabase
+VITE_SUPABASE_ANON_KEY=votre_cle_anon_supabase
 
 # Livepeer (déjà configuré, optionnel de changer)
-NEXT_PUBLIC_LIVEPEER_STREAM_ID=fd1fc93e-0f0d-4084-856a-29c57dc19f37
-NEXT_PUBLIC_LIVEPEER_PLAYBACK_ID=fd1fae44jz9ehoud
-NEXT_PUBLIC_LIVEPEER_PLAYBACK_URL=https://livepeercdn.studio/hls/fd1fae44jz9ehoud/index.m3u8
-
-# Optionnel: Pour diffuser
-LIVEPEER_API_KEY=votre_cle_api_livepeer
+VITE_LIVEPEER_STREAM_ID=fd1fc93e-0f0d-4084-856a-29c57dc19f37
+VITE_LIVEPEER_PLAYBACK_ID=fd1fae44jz9ehoud
+VITE_LIVEPEER_PLAYBACK_URL=https://livepeercdn.studio/hls/fd1fae44jz9ehoud/index.m3u8
 ```
 
 ### 5. Installation locale
@@ -64,27 +61,17 @@ npm run dev
 
 Ouvrez [http://localhost:3000](http://localhost:3000)
 
-### 6. Déploiement sur Vercel
-
-#### Option A: Via l'interface Vercel
-
-1. Poussez votre code sur GitHub
-2. Allez sur [Vercel](https://vercel.com)
-3. Importez votre repository
-4. Ajoutez les variables d'environnement dans les paramètres du projet
-5. Déployez !
-
-#### Option B: Via CLI
+### 6. Build de production
 
 ```bash
-# Installer Vercel CLI
-npm i -g vercel
+# Construire pour la production
+npm run build
 
-# Déployer
-vercel
-
-# Suivre les instructions et ajouter les variables d'environnement
+# Prévisualiser le build
+npm run preview
 ```
+
+Le dossier `dist/` contiendra les fichiers statiques à déployer sur votre hébergeur préféré (Vercel, Netlify, etc.).
 
 ## 📊 Structure de la base de données
 
@@ -115,13 +102,14 @@ vercel
 
 ## 🛠️ Technologies utilisées
 
-- **Next.js 14** - Framework React
+- **React 18** - Bibliothèque UI
 - **TypeScript** - Typage statique
+- **Vite** - Build tool et dev server
+- **React Router v6** - Routing
 - **Tailwind CSS** - Styling
 - **Supabase** - Backend (Auth + Database + Realtime)
 - **Livepeer** - Streaming vidéo
 - **HLS.js** - Lecture HLS dans le navigateur
-- **Vercel** - Hébergement
 
 ## 📝 Notes importantes
 
@@ -143,8 +131,12 @@ vercel
 - Vérifiez la connexion dans l'interface (indicateur vert/rouge)
 
 ### Erreur d'authentification
-- Vérifiez vos variables d'environnement Supabase
+- Vérifiez vos variables d'environnement Supabase (préfixe `VITE_`)
 - Vérifiez que l'email est confirmé (vérifiez vos spams)
+
+### Variables d'environnement non chargées
+- Assurez-vous que les variables commencent par `VITE_` pour être accessibles côté client
+- Redémarrez le serveur de développement après modification du fichier `.env`
 
 ## 📄 Licence
 
