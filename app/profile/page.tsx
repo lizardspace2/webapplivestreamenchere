@@ -174,30 +174,54 @@ export default function ProfilePage() {
         updated_at: new Date().toISOString(),
       }
 
-      console.log('Profile to save:', profileToSave)
-
+      console.log('Profile: handleSubmit - Profile to save:', profileToSave)
+      console.log('Profile: handleSubmit - User ID:', user.id)
+      
+      const startTime = Date.now()
+      console.log('Profile: handleSubmit - Starting upsert query...')
+      
       const { data, error } = await supabase
         .from('profiles')
         .upsert(profileToSave, {
           onConflict: 'id',
         })
         .select()
+      
+      const queryTime = Date.now() - startTime
+      console.log(`Profile: handleSubmit - Query completed in ${queryTime}ms`)
+      console.log('Profile: handleSubmit - Query result:', { data, error })
 
       if (error) {
-        console.error('Supabase error saving profile:', error.code, error.message, error.details)
+        console.error('Profile: handleSubmit - Supabase error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          status: (error as any).status,
+          statusText: (error as any).statusText,
+        })
+        console.error('Profile: handleSubmit - Full error object:', error)
+        
         // Si erreur RLS, donner un message plus clair
         if (error.code === '42501' || error.code === 'PGRST301' || error.message?.includes('permission') || error.message?.includes('policy') || error.message?.includes('RLS')) {
+          console.error('Profile: handleSubmit - RLS/permission error detected')
           showError('Erreur de permissions. Vérifiez que les politiques RLS sont correctement configurées dans Supabase.')
         } else {
+          console.error('Profile: handleSubmit - Other error type')
           showError(error.message || 'Erreur lors de la sauvegarde du profil')
         }
         throw error
       }
 
-      console.log('Profile saved successfully:', data)
+      console.log('Profile: handleSubmit - Profile saved successfully:', data)
+      console.log('Profile: handleSubmit - Refreshing profile in context...')
+      
       // Rafraîchir le profil dans le contexte
       await refreshProfile()
+      console.log('Profile: handleSubmit - Profile refreshed in context')
+      
       showSuccess('Profil mis à jour avec succès!')
+      console.log('Profile: handleSubmit - Success message shown')
     } catch (err: any) {
       console.error('Error saving profile:', err)
       showError(err.message || 'Erreur lors de la sauvegarde du profil')

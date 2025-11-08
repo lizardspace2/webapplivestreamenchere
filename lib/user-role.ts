@@ -22,17 +22,27 @@ export async function getUserRole(user: User | null): Promise<UserRole> {
 
     const queryPromise = (async () => {
       try {
+        console.log('getUserRole: Starting query for user', user.id)
+        
         // Créer un AbortController pour annuler la requête si nécessaire
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 2000)
+        const timeoutId = setTimeout(() => {
+          console.warn('getUserRole: AbortController timeout triggered')
+          controller.abort()
+        }, 2000)
         
+        console.log('getUserRole: Executing query...')
+        const startTime = Date.now()
         const { data, error } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single()
+        const queryTime = Date.now() - startTime
+        console.log(`getUserRole: Query completed in ${queryTime}ms`)
         
         clearTimeout(timeoutId)
+        console.log('getUserRole: Query result - data:', data, 'error:', error)
 
         if (error) {
           console.warn('getUserRole: Error fetching role:', error.code, error.message)

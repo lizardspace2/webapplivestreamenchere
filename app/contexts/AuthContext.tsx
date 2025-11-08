@@ -74,16 +74,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Charger le rôle de l'utilisateur
   const loadUserRole = useCallback(async (currentUser: User | null) => {
+    console.log('AuthContext: loadUserRole - Called with user:', currentUser?.id, currentUser?.email)
     if (!currentUser) {
+      console.log('AuthContext: loadUserRole - No user provided, setting role to null')
       setUserRole(null)
       return
     }
 
     try {
+      console.log('AuthContext: loadUserRole - Calling getUserRole...')
+      const startTime = Date.now()
       const role = await getUserRole(currentUser)
+      const roleTime = Date.now() - startTime
+      console.log(`AuthContext: loadUserRole - getUserRole completed in ${roleTime}ms, role:`, role)
       setUserRole(role)
+      console.log('AuthContext: loadUserRole - Role set successfully')
     } catch (error) {
-      console.error('Failed to load user role:', error)
+      console.error('AuthContext: loadUserRole - Exception:', error)
       setUserRole('participant') // Par défaut
     }
   }, [])
@@ -91,24 +98,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Charger le profil de l'utilisateur
   const loadProfile = useCallback(async (userId: string) => {
     try {
+      console.log('AuthContext: loadProfile - Starting for user', userId)
+      const startTime = Date.now()
+      
       const { data, error: profileError } = await supabase
         .from('profiles')
         .select('first_name, last_name, address, postal_code, city, country, phone_number, role')
         .eq('id', userId)
         .single()
+      
+      const queryTime = Date.now() - startTime
+      console.log(`AuthContext: loadProfile - Query completed in ${queryTime}ms`)
+      console.log('AuthContext: loadProfile - Result:', { data, error: profileError })
 
       if (profileError) {
+        console.warn('AuthContext: loadProfile - Error details:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint,
+        })
         if (profileError.code === 'PGRST116') {
           // Profil n'existe pas encore
+          console.log('AuthContext: loadProfile - Profile not found (PGRST116)')
           setProfile(null)
           return
         }
-        console.warn('Error loading profile:', profileError)
+        console.warn('AuthContext: loadProfile - Other error, setting profile to null')
         setProfile(null)
         return
       }
 
       if (data) {
+        console.log('AuthContext: loadProfile - Setting profile data:', data)
         setProfile({
           first_name: data.first_name,
           last_name: data.last_name,
@@ -119,11 +141,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phone_number: data.phone_number,
           role: (data.role as 'admin' | 'participant') || 'participant',
         })
+        console.log('AuthContext: loadProfile - Profile set successfully')
       } else {
+        console.log('AuthContext: loadProfile - No data returned, setting profile to null')
         setProfile(null)
       }
     } catch (e) {
-      console.error('Failed to load profile:', e)
+      console.error('AuthContext: loadProfile - Exception:', e)
       setProfile(null)
     }
   }, [])
@@ -242,11 +266,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (user) {
           console.log('AuthContext: User found:', user.id, user.email)
+          console.log('AuthContext: Starting parallel load of role and profile...')
+          const parallelStartTime = Date.now()
           // Charger le rôle et le profil en parallèle pour de meilleures performances
           await Promise.all([
             loadUserRole(user),
             loadProfile(user.id)
           ])
+          const parallelTime = Date.now() - parallelStartTime
+          console.log(`AuthContext: Parallel load completed in ${parallelTime}ms`)
         } else {
           console.log('AuthContext: No user found')
           // Pas d'utilisateur, proposer la connexion
@@ -271,22 +299,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
       
       console.log('AuthContext: Auth state changed:', event)
+      console.log('AuthContext: Session:', session ? 'exists' : 'null', session?.user?.id, session?.user?.email)
       const currentUser = session?.user ?? null
+      console.log('AuthContext: Setting user:', currentUser?.id, currentUser?.email)
       setUser(currentUser)
       setError(null)
       setShouldShowAuth(false)
       
       if (currentUser) {
+        console.log('AuthContext: Loading role and profile for user:', currentUser.id)
         // Charger le rôle et le profil en parallèle
         try {
+          const authChangeStartTime = Date.now()
           await Promise.all([
             loadUserRole(currentUser),
             loadProfile(currentUser.id)
           ])
+          const authChangeTime = Date.now() - authChangeStartTime
+          console.log(`AuthContext: Auth change load completed in ${authChangeTime}ms`)
         } catch (error) {
           console.error('AuthContext: Error loading user data on auth change:', error)
         }
       } else {
+        console.log('AuthContext: No user in session, clearing role and profile')
         setUserRole(null)
         setProfile(null)
         if (event === 'SIGNED_OUT') {
