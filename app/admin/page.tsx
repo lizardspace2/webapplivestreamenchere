@@ -5,6 +5,8 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { getUserRole, isAdmin } from '@/lib/user-role'
 import AuthModal from '@/app/components/AuthModal'
 import ProfileModal from '@/app/components/ProfileModal'
+import Toast from '@/app/components/Toast'
+import { useToast } from '@/app/hooks/useToast'
 import type { User } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 
@@ -23,6 +25,7 @@ export default function AdminPage() {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const { toast, showError, showWarning, showSuccess, hideToast } = useToast()
   const [user, setUser] = useState<User | null>(null)
   const [isAdminUser, setIsAdminUser] = useState(false)
   const [bids, setBids] = useState<Bid[]>([])
@@ -237,10 +240,11 @@ export default function AdminPage() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         setIsStreaming(true)
+        showSuccess('Diffusion démarrée avec succès!')
       }
     } catch (err) {
       console.error('Error accessing media devices:', err)
-      alert('Impossible d\'accéder à la caméra/microphone')
+      showError('Impossible d\'accéder à la caméra/microphone. Vérifiez les permissions.')
     }
   }
 
@@ -253,10 +257,11 @@ export default function AdminPage() {
       videoRef.current.srcObject = null
     }
     setIsStreaming(false)
+    showInfo('Diffusion arrêtée')
   }
 
   async function handleCloseAuction() {
-    if (!confirm('Êtes-vous sûr de vouloir clôturer cette vente aux enchères ?')) {
+    if (!window.confirm('Êtes-vous sûr de vouloir clôturer cette vente aux enchères ?')) {
       return
     }
 
@@ -273,10 +278,10 @@ export default function AdminPage() {
         clearTimeout(autoCloseTimer)
         setAutoCloseTimer(null)
       }
-      alert('Vente aux enchères clôturée avec succès!')
+      showSuccess('Vente aux enchères clôturée avec succès!')
     } catch (err: any) {
       console.error('Failed to close auction:', err)
-      alert(err.message || 'Erreur lors de la clôture')
+      showError(err.message || 'Erreur lors de la clôture')
     }
   }
 
@@ -289,9 +294,10 @@ export default function AdminPage() {
 
       if (error) throw error
       setAuctionStatus('paused')
+      showInfo('Vente aux enchères mise en pause')
     } catch (err: any) {
       console.error('Failed to pause auction:', err)
-      alert(err.message || 'Erreur lors de la mise en pause')
+      showError(err.message || 'Erreur lors de la mise en pause')
     }
   }
 
@@ -305,9 +311,10 @@ export default function AdminPage() {
       if (error) throw error
       setAuctionStatus('active')
       setLastBidTime(new Date())
+      showSuccess('Vente aux enchères reprise avec succès!')
     } catch (err: any) {
       console.error('Failed to resume auction:', err)
-      alert(err.message || 'Erreur lors de la reprise')
+      showError(err.message || 'Erreur lors de la reprise')
     }
   }
 
@@ -607,6 +614,14 @@ export default function AdminPage() {
           user={user}
         />
       )}
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
     </div>
   )
 }

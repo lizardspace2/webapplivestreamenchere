@@ -5,6 +5,8 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { LIVEPEER_CONFIG } from '@/lib/livepeer'
 import AuthModal from '@/app/components/AuthModal'
 import ProfileModal from '@/app/components/ProfileModal'
+import Toast from '@/app/components/Toast'
+import { useToast } from '@/app/hooks/useToast'
 import { getUserRole } from '@/lib/user-role'
 import type { User } from '@supabase/supabase-js'
 import Hls from 'hls.js'
@@ -24,6 +26,7 @@ interface Bid {
 export default function AuctionPage() {
   const router = useRouter()
   const videoRef = useRef<HTMLVideoElement>(null)
+  const { toast, showError, showWarning, showSuccess, hideToast } = useToast()
   const [user, setUser] = useState<User | null>(null)
   const [userRole, setUserRole] = useState<'admin' | 'participant' | null>(null)
   const [bids, setBids] = useState<Bid[]>([])
@@ -227,24 +230,24 @@ export default function AuctionPage() {
   async function placeBid(e: React.FormEvent) {
     e.preventDefault()
     if (!user) {
-      alert('Veuillez vous connecter pour enchérir.')
+      showWarning('Veuillez vous connecter pour enchérir.')
       return
     }
 
     if (auctionStatus !== 'active') {
-      alert('Les enchères sont actuellement fermées.')
+      showWarning('Les enchères sont actuellement fermées.')
       return
     }
 
     const amount = Number(bidAmount)
     if (!amount || Number.isNaN(amount)) {
-      alert('Montant invalide')
+      showError('Montant invalide')
       return
     }
 
     const minAllowed = computeMinAllowed(currentBid.amount, minIncrement)
     if (amount < minAllowed) {
-      alert(`Montant trop faible — minimum requis: ${minAllowed} €`)
+      showError(`Montant trop faible — minimum requis: ${minAllowed} €`)
       return
     }
 
@@ -259,9 +262,10 @@ export default function AuctionPage() {
       const { error } = await supabase.from('bids').insert([bid])
       if (error) throw error
       setBidAmount('')
+      showSuccess(`Enchère de ${amount} € placée avec succès!`)
     } catch (err: any) {
       console.error('Failed to insert bid', err)
-      alert(err.message || 'Impossible de placer l\'enchère, réessayez.')
+      showError(err.message || 'Impossible de placer l\'enchère, réessayez.')
     }
   }
 
@@ -521,6 +525,14 @@ export default function AuctionPage() {
           user={user}
         />
       )}
+
+      {/* Toast Notification */}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        isVisible={toast.isVisible}
+        onClose={hideToast}
+      />
     </div>
   )
 }
