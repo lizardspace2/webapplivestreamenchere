@@ -2,15 +2,17 @@
 
 import { useState, useEffect, FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/app/contexts/AuthContext'
 import type { User } from '@supabase/supabase-js'
 
 interface AuthModalProps {
   isOpen: boolean
   onClose: () => void
-  onAuthSuccess: (user: User) => void
+  onAuthSuccess?: (user: User) => void
 }
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalProps) {
+  const { refreshUser } = useAuth()
   const [isSignUp, setIsSignUp] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -67,7 +69,12 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }: AuthModalP
       if (signInError) throw signInError
 
       if (data.user) {
-        onAuthSuccess(data.user)
+        // Rafraîchir l'utilisateur dans le contexte
+        await refreshUser()
+        // Appeler le callback si fourni
+        if (onAuthSuccess) {
+          onAuthSuccess(data.user)
+        }
         onClose()
       }
     } catch (err: any) {

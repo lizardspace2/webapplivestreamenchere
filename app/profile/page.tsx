@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import AuthModal from '@/app/components/AuthModal'
 import Toast from '@/app/components/Toast'
 import { useToast } from '@/app/hooks/useToast'
-import type { User } from '@supabase/supabase-js'
+import { useAuth } from '@/app/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
@@ -49,8 +49,7 @@ const countryList = [
 export default function ProfilePage() {
   const router = useRouter()
   const { toast, showError, showSuccess, hideToast } = useToast()
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading, signOut: authSignOut } = useAuth()
   const [saving, setSaving] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
   const [profileData, setProfileData] = useState<ProfileData>({
@@ -96,74 +95,15 @@ export default function ProfilePage() {
     }
   }
 
+  // Charger le profil quand l'utilisateur change
   useEffect(() => {
-    let mounted = true
-    let loadingTimeout: NodeJS.Timeout
-
-    // Timeout de sécurité : arrêter le chargement après 3 secondes maximum
-    loadingTimeout = setTimeout(() => {
-      if (mounted) {
-        console.log('Loading timeout reached in profile page')
-        setLoading(false)
-      }
-    }, 3000)
-
-    async function loadUser() {
-      try {
-        console.log('Loading user in profile page...')
-        const { data: { user }, error } = await supabase.auth.getUser()
-        
-        if (error) {
-          console.warn('Auth error in profile:', error)
-        }
-        
-        if (!mounted) return
-        
-        setUser(user)
-        if (user) {
-          console.log('User found, loading profile...', user.id)
-          try {
-            await loadProfile(user.id)
-          } catch (profileError) {
-            console.error('Error loading profile:', profileError)
-          }
-        } else {
-          console.log('No user, opening auth modal')
-          setIsAuthModalOpen(true)
-        }
-      } catch (e) {
-        console.error('Failed to load user:', e)
-      } finally {
-        if (mounted) {
-          clearTimeout(loadingTimeout)
-          setLoading(false)
-        }
-      }
+    if (user) {
+      loadProfile(user.id)
+    } else if (!authLoading) {
+      // Si le chargement est terminé et qu'il n'y a pas d'utilisateur, ouvrir le modal
+      setIsAuthModalOpen(true)
     }
-
-    loadUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!mounted) return
-      console.log('Auth state changed in profile:', _event)
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        try {
-          await loadProfile(session.user.id)
-        } catch (profileError) {
-          console.error('Error loading profile on auth change:', profileError)
-        }
-      } else {
-        setIsAuthModalOpen(true)
-      }
-    })
-
-    return () => {
-      mounted = false
-      clearTimeout(loadingTimeout)
-      subscription.unsubscribe()
-    }
-  }, [])
+  }, [user, authLoading])
 
   function handleInputChange(field: keyof ProfileData, value: string) {
     setProfileData((prev) => ({ ...prev, [field]: value }))
@@ -199,16 +139,16 @@ export default function ProfilePage() {
     }
   }
 
-  async function signOut() {
+  async function handleSignOut() {
     try {
-      await supabase.auth.signOut()
+      await authSignOut()
       router.push('/auction')
     } catch (err) {
       console.error(err)
     }
   }
 
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -216,27 +156,6 @@ export default function ProfilePage() {
           <p className="text-gray-600">Chargement...</p>
         </div>
       </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <p className="text-gray-600 mb-4">Veuillez vous connecter pour accéder à votre profil</p>
-          </div>
-        </div>
-        <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-          onAuthSuccess={(authUser) => {
-            setUser(authUser)
-            setIsAuthModalOpen(false)
-            loadProfile(authUser.id)
-          }}
-        />
-      </>
     )
   }
 
@@ -258,7 +177,7 @@ export default function ProfilePage() {
                 Retour
               </button>
               <button
-                onClick={signOut}
+                onClick={handleSignOut}
                 className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium transition-colors border border-red-200"
               >
                 Se déconnecter
@@ -267,23 +186,32 @@ export default function ProfilePage() {
           </div>
 
           {/* User Info */}
-          <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
-              {user.email?.charAt(0).toUpperCase() || 'U'}
-            </div>
-            <div>
-              <div className="font-semibold text-gray-800">{user.email}</div>
-              <div className="text-sm text-gray-600">
-                {profileData.first_name && profileData.last_name
-                  ? `${profileData.first_name} ${profileData.last_name}`
-                  : 'Profil incomplet'}
+          {user ? (
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                {user.email?.charAt(0).toUpperCase() || 'U'}
+              </div>
+              <div>
+                <div className="font-semibold text-gray-800">{user.email}</div>
+                <div className="text-sm text-gray-600">
+                  {profileData.first_name && profileData.last_name
+                    ? `${profileData.first_name} ${profileData.last_name}`
+                    : 'Profil incomplet'}
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-800 text-sm">
+                ⚠️ Veuillez vous connecter pour accéder à votre profil
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Profile Form */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-6 space-y-6">
+        {user ? (
+          <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl p-6 space-y-6">
           {/* Informations personnelles */}
           <div>
             <h2 className="text-xl font-bold text-gray-800 mb-4">Informations personnelles</h2>
@@ -480,6 +408,13 @@ export default function ProfilePage() {
             </button>
           </div>
         </form>
+        ) : (
+          <div className="bg-white rounded-2xl shadow-xl p-6">
+            <div className="text-center py-12">
+              <p className="text-gray-600 mb-4">Connectez-vous pour modifier votre profil</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Toast Notification */}
@@ -488,6 +423,23 @@ export default function ProfilePage() {
         type={toast.type}
         isVisible={toast.isVisible}
         onClose={hideToast}
+      />
+
+      {/* Auth Modal - affiché si pas d'utilisateur */}
+      <AuthModal
+        isOpen={isAuthModalOpen && !user}
+        onClose={() => {
+          if (user) {
+            setIsAuthModalOpen(false)
+          } else {
+            // Si pas d'utilisateur, rediriger vers /auction
+            router.push('/auction')
+          }
+        }}
+        onAuthSuccess={() => {
+          setIsAuthModalOpen(false)
+          // Le profil sera chargé automatiquement via le useEffect qui écoute user
+        }}
       />
     </div>
   )
