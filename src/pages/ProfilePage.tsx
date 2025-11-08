@@ -20,14 +20,14 @@ interface ProfileData {
 }
 
 const countries = [
-  { code: '+33', name: 'France', flag: 'ðŸ‡«ðŸ‡·' },
-  { code: '+32', name: 'Belgique', flag: 'ðŸ‡§ðŸ‡ª' },
-  { code: '+41', name: 'Suisse', flag: 'ðŸ‡¨ðŸ‡­' },
-  { code: '+1', name: 'Canada / USA', flag: 'ðŸ‡ºðŸ‡¸' },
-  { code: '+44', name: 'Royaume-Uni', flag: 'ðŸ‡¬ðŸ‡§' },
-  { code: '+49', name: 'Allemagne', flag: 'ðŸ‡©ðŸ‡ª' },
-  { code: '+34', name: 'Espagne', flag: 'ðŸ‡ªðŸ‡¸' },
-  { code: '+39', name: 'Italie', flag: 'ðŸ‡®ðŸ‡¹' },
+  { code: '+33', name: 'France', flag: '🇫🇷' },
+  { code: '+32', name: 'Belgique', flag: '🇧🇪' },
+  { code: '+41', name: 'Suisse', flag: '🇨🇭' },
+  { code: '+1', name: 'Canada / USA', flag: '🇺🇸' },
+  { code: '+44', name: 'Royaume-Uni', flag: '🇬🇧' },
+  { code: '+49', name: 'Allemagne', flag: '🇩🇪' },
+  { code: '+34', name: 'Espagne', flag: '🇪🇸' },
+  { code: '+39', name: 'Italie', flag: '🇮🇹' },
 ]
 
 const countryList = [
@@ -35,7 +35,7 @@ const countryList = [
   'Belgique',
   'Suisse',
   'Canada',
-  'Ã‰tats-Unis',
+  'États-Unis',
   'Royaume-Uni',
   'Allemagne',
   'Espagne',
@@ -101,18 +101,18 @@ export default function ProfilePage() {
     }
   }
 
-  // Charger le profil depuis le contexte ou depuis la base de donnÃ©es
+  // Charger le profil depuis le contexte ou depuis la base de données
   useEffect(() => {
     let mounted = true
     
     if (user) {
-      // Si le contexte a dÃ©jÃ  un profil, l'utiliser
+      // Si le contexte a déjà un profil, l'utiliser
       if (contextProfile && mounted) {
         // Utiliser directement phone_country_code du contexte s'il existe
         let phoneCountryCode = contextProfile.phone_country_code || '+33'
         let phoneNumber = contextProfile.phone_number || ''
         
-        // Si le numÃ©ro commence par un code pays mais qu'on n'a pas phone_country_code, l'extraire
+        // Si le numéro commence par un code pays mais qu'on n'a pas phone_country_code, l'extraire
         if (phoneNumber && phoneNumber.startsWith('+') && !contextProfile.phone_country_code) {
           const match = phoneNumber.match(/^(\+\d{1,3})/)
           if (match) {
@@ -137,12 +137,12 @@ export default function ProfilePage() {
           setIsAuthModalOpen(false)
         }
       } else if (mounted) {
-        // Sinon, charger depuis la base de donnÃ©es
+        // Sinon, charger depuis la base de données
         loadProfile(user.id)
         setIsAuthModalOpen(false)
       }
     } else if (!authLoading && mounted) {
-      // Si le chargement est terminÃ© et qu'il n'y a pas d'utilisateur, ouvrir le modal
+      // Si le chargement est terminé et qu'il n'y a pas d'utilisateur, ouvrir le modal
       setIsAuthModalOpen(true)
     }
     
@@ -158,7 +158,7 @@ export default function ProfilePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!user) {
-      showError('Vous devez Ãªtre connectÃ© pour modifier votre profil')
+      showError('Vous devez être connecté pour modifier votre profil')
       return
     }
 
@@ -216,12 +216,12 @@ export default function ProfilePage() {
           console.error('Profile: handleSubmit - RLS/permission error detected')
           showError(
             'Erreur de permissions RLS. ' +
-            'ExÃ©cutez le script supabase/fix_profiles_rls.sql dans votre dashboard Supabase ' +
-            'pour dÃ©sactiver temporairement RLS et permettre l\'accÃ¨s Ã  la table profiles.'
+            'Exécutez le script supabase/fix_profiles_rls.sql dans votre dashboard Supabase ' +
+            'pour désactiver temporairement RLS et permettre l\'accès à la table profiles.'
           )
         } else if (error.code === 'PGRST116') {
           console.error('Profile: handleSubmit - Not found error')
-          showError('Profil non trouvÃ©. Veuillez rÃ©essayer.')
+          showError('Profil non trouvé. Veuillez réessayer.')
         } else {
           console.error('Profile: handleSubmit - Other error type')
           showError(error.message || 'Erreur lors de la sauvegarde du profil')
@@ -232,12 +232,12 @@ export default function ProfilePage() {
       console.log('Profile: handleSubmit - Profile saved successfully:', data)
       console.log('Profile: handleSubmit - Refreshing profile and user in context...')
       
-      // RafraÃ®chir le profil et l'utilisateur dans le contexte pour mettre à jour le rôle
+      // Rafraîchir le profil et l'utilisateur dans le contexte pour mettre à jour le rôle
       await refreshProfile()
       await refreshUser()
       console.log('Profile: handleSubmit - Profile and user refreshed in context')
       
-      showSuccess('Profil mis Ã  jour avec succÃ¨s!')
+      showSuccess('Profil mis à jour avec succès!')
       console.log('Profile: handleSubmit - Success message shown')
     } catch (err: any) {
       console.error('Error saving profile:', err)
@@ -275,7 +275,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">Mon Profil</h1>
-              <p className="text-gray-600 mt-1">GÃ©rez vos informations personnelles</p>
+              <p className="text-gray-600 mt-1">Gérez vos informations personnelles</p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -288,7 +288,7 @@ export default function ProfilePage() {
                 onClick={handleSignOut}
                 className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium transition-colors border border-red-200"
               >
-                Se dÃ©connecter
+                Se déconnecter
               </button>
             </div>
           </div>
@@ -311,7 +311,7 @@ export default function ProfilePage() {
           ) : (
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-yellow-800 text-sm">
-                âš ï¸ Veuillez vous connecter pour accÃ©der Ã  votre profil
+                ⚠️ Veuillez vous connecter pour accéder à votre profil
               </p>
             </div>
           )}
@@ -326,7 +326,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-2">
-                  PrÃ©nom *
+                  Prénom *
                 </label>
                 <input
                   id="first_name"
@@ -418,7 +418,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <label htmlFor="additional_info" className="block text-sm font-medium text-gray-700 mb-2">
-                  Informations complÃ©mentaires
+                  Informations complémentaires
                 </label>
                 <textarea
                   id="additional_info"
@@ -426,14 +426,14 @@ export default function ProfilePage() {
                   onChange={(e) => handleInputChange('additional_info', e.target.value)}
                   rows={3}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none resize-none"
-                  placeholder="Appartement, Ã©tage, bÃ¢timent, etc."
+                  placeholder="Appartement, étage, bâtiment, etc."
                 />
                 <p className="text-xs text-gray-500 mt-1">Optionnel</p>
               </div>
             </div>
           </div>
 
-          {/* TÃ©lÃ©phone */}
+          {/* Téléphone */}
           <div>
             <h2 className="text-xl font-bold text-gray-800 mb-4">Contact</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -457,7 +457,7 @@ export default function ProfilePage() {
               </div>
               <div className="md:col-span-2">
                 <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-2">
-                  NumÃ©ro de tÃ©lÃ©phone *
+                  Numéro de téléphone *
                 </label>
                 <input
                   id="phone_number"
@@ -556,7 +556,7 @@ export default function ProfilePage() {
         onClose={hideToast}
       />
 
-      {/* Auth Modal - affichÃ© si pas d'utilisateur */}
+      {/* Auth Modal - affiché si pas d'utilisateur */}
       <AuthModal
         modalId="profile-auth-modal"
         isOpen={isAuthModalOpen && !user}
@@ -570,7 +570,7 @@ export default function ProfilePage() {
         }}
         onAuthSuccess={() => {
           setIsAuthModalOpen(false)
-          // Le profil sera chargÃ© automatiquement via le useEffect qui Ã©coute user
+          // Le profil sera chargé automatiquement via le useEffect qui écoute user
         }}
       />
     </div>

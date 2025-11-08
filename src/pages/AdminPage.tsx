@@ -38,14 +38,14 @@ export default function AdminPage() {
   const room = 'auction-room'
   const startingPrice = 10
   const minIncrement = 1
-  const AUTO_CLOSE_DELAY = 30000 // 30 secondes sans enchÃ¨re = clÃ´ture automatique
+  const AUTO_CLOSE_DELAY = 30000 // 30 secondes sans enchère = clôture automatique
 
-  // VÃ©rifier la configuration Supabase
+  // Vérifier la configuration Supabase
   useEffect(() => {
     setSupabaseConfigured(isSupabaseConfigured())
   }, [])
 
-  // VÃ©rifier le rÃ´le et rediriger si pas admin
+  // Vérifier le rôle et rediriger si pas admin
   useEffect(() => {
     if (!authLoading && user && !isAdminUser) {
       // Si l'utilisateur n'est pas admin, rediriger
@@ -53,7 +53,7 @@ export default function AdminPage() {
     }
   }, [user, isAdminUser, authLoading, navigate])
 
-  // VÃ©rifier le profil complet quand l'utilisateur change
+  // Vérifier le profil complet quand l'utilisateur change
   useEffect(() => {
     let mounted = true
     
@@ -72,7 +72,7 @@ export default function AdminPage() {
     }
   }, [user])
 
-  // VÃ©rifier le statut de l'enchÃ¨re et les nouvelles enchÃ¨res
+  // Vérifier le statut de l'enchère et les nouvelles enchères
   useEffect(() => {
     let mounted = true
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -85,8 +85,8 @@ export default function AdminPage() {
 
       if (!mounted) return
 
-      // L'utilisateur est maintenant gÃ©rÃ© par le contexte AuthContext
-      // Le profil complet est vÃ©rifiÃ© dans un useEffect sÃ©parÃ©
+      // L'utilisateur est maintenant géré par le contexte AuthContext
+      // Le profil complet est vérifié dans un useEffect séparé
 
       // Subscribe to auction room status
       supabase
@@ -128,7 +128,7 @@ export default function AdminPage() {
                 : current
             )
             setLastBidTime(new Date())
-            // RÃ©initialiser le timer de clÃ´ture automatique
+            // Réinitialiser le timer de clôture automatique
             resetAutoCloseTimer()
           }
         )
@@ -149,10 +149,10 @@ export default function AdminPage() {
         if (roomData) {
           setAuctionStatus(roomData.status)
         } else {
-          // CrÃ©er la salle si elle n'existe pas
+          // Créer la salle si elle n'existe pas
           await supabase.from('auction_rooms').insert({
             name: room,
-            description: 'Salle d\'enchÃ¨res principale',
+            description: 'Salle d\'enchères principale',
             starting_price: startingPrice,
             min_increment: minIncrement,
             status: 'active',
@@ -205,7 +205,7 @@ export default function AdminPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room, startingPrice])
 
-  // Fonction pour fermer l'enchÃ¨re (sans confirmation pour le timer automatique)
+  // Fonction pour fermer l'enchère (sans confirmation pour le timer automatique)
   const closeAuctionWithoutConfirm = useCallback(async () => {
     try {
       const { error } = await supabase
@@ -219,14 +219,14 @@ export default function AdminPage() {
         clearTimeout(autoCloseTimerRef.current)
         autoCloseTimerRef.current = null
       }
-      showSuccess('Vente aux enchÃ¨res clÃ´turÃ©e automatiquement aprÃ¨s 30 secondes sans enchÃ¨re!')
+      showSuccess('Vente aux enchères clôturée automatiquement après 30 secondes sans enchère!')
     } catch (err: any) {
       console.error('Failed to close auction:', err)
-      showError(err.message || 'Erreur lors de la clÃ´ture')
+      showError(err.message || 'Erreur lors de la clôture')
     }
   }, [room, showSuccess, showError])
 
-  // Timer de clÃ´ture automatique
+  // Timer de clôture automatique
   const resetAutoCloseTimer = useCallback(() => {
     if (autoCloseTimerRef.current) {
       clearTimeout(autoCloseTimerRef.current)
@@ -262,11 +262,11 @@ export default function AdminPage() {
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         setIsStreaming(true)
-        showSuccess('Diffusion dÃ©marrÃ©e avec succÃ¨s!')
+        showSuccess('Diffusion démarrée avec succès!')
       }
     } catch (err) {
       console.error('Error accessing media devices:', err)
-      showError('Impossible d\'accÃ©der Ã  la camÃ©ra/microphone. VÃ©rifiez les permissions.')
+      showError('Impossible d\'accéder à la caméra/microphone. Vérifiez les permissions.')
     }
   }
 
@@ -279,15 +279,15 @@ export default function AdminPage() {
       videoRef.current.srcObject = null
     }
     setIsStreaming(false)
-    showInfo('Diffusion arrÃªtÃ©e')
+    showInfo('Diffusion arrêtée')
   }
 
   async function handleCloseAuction() {
-    if (!window.confirm('ÃŠtes-vous sÃ»r de vouloir clÃ´turer cette vente aux enchÃ¨res ?')) {
+    if (!window.confirm('Êtes-vous sûr de vouloir clôturer cette vente aux enchères ?')) {
       return
     }
 
-    // Annuler le timer automatique si prÃ©sent
+    // Annuler le timer automatique si présent
     if (autoCloseTimerRef.current) {
       clearTimeout(autoCloseTimerRef.current)
       autoCloseTimerRef.current = null
@@ -302,10 +302,10 @@ export default function AdminPage() {
       if (error) throw error
 
       setAuctionStatus('ended')
-      showSuccess('Vente aux enchÃ¨res clÃ´turÃ©e avec succÃ¨s!')
+      showSuccess('Vente aux enchères clôturée avec succès!')
     } catch (err: any) {
       console.error('Failed to close auction:', err)
-      showError(err.message || 'Erreur lors de la clÃ´ture')
+      showError(err.message || 'Erreur lors de la clôture')
     }
   }
 
@@ -318,7 +318,7 @@ export default function AdminPage() {
 
       if (error) throw error
       setAuctionStatus('paused')
-      showInfo('Vente aux enchÃ¨res mise en pause')
+      showInfo('Vente aux enchères mise en pause')
     } catch (err: any) {
       console.error('Failed to pause auction:', err)
       showError(err.message || 'Erreur lors de la mise en pause')
@@ -335,7 +335,7 @@ export default function AdminPage() {
       if (error) throw error
       setAuctionStatus('active')
       setLastBidTime(new Date())
-      showSuccess('Vente aux enchÃ¨res reprise avec succÃ¨s!')
+      showSuccess('Vente aux enchères reprise avec succès!')
     } catch (err: any) {
       console.error('Failed to resume auction:', err)
       showError(err.message || 'Erreur lors de la reprise')
@@ -376,7 +376,7 @@ export default function AdminPage() {
   }
 
   async function handleAuthSuccess(authUser: User) {
-    // RafraÃ®chir l'utilisateur dans le contexte
+    // Rafraîchir l'utilisateur dans le contexte
     await refreshUser()
     if (authUser) {
       await checkProfileComplete(authUser.id)
@@ -413,7 +413,7 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto">
         {!supabaseConfigured && (
           <div className="bg-red-50 border-2 border-red-300 rounded-2xl shadow-xl p-6 mb-4">
-            <h2 className="text-xl font-bold text-red-800 mb-2">âš ï¸ Configuration Supabase requise</h2>
+            <h2 className="text-xl font-bold text-red-800 mb-2">⚠️ Configuration Supabase requise</h2>
           </div>
         )}
 
@@ -421,13 +421,13 @@ export default function AdminPage() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Panneau Commissaire-Priseur</h1>
-              <p className="text-sm text-gray-600 mt-1">Gestion de la vente aux enchÃ¨res</p>
+              <p className="text-sm text-gray-600 mt-1">Gestion de la vente aux enchères</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`}></div>
                 <span className="text-sm text-gray-600">
-                  {connected ? 'ConnectÃ©' : 'DÃ©connectÃ©'}
+                  {connected ? 'Connecté' : 'Déconnecté'}
                 </span>
               </div>
               <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -435,7 +435,7 @@ export default function AdminPage() {
                 auctionStatus === 'paused' ? 'bg-yellow-100 text-yellow-800' :
                 'bg-red-100 text-red-800'
               }`}>
-                {auctionStatus === 'active' ? 'ACTIVE' : auctionStatus === 'paused' ? 'EN PAUSE' : 'TERMINÃ‰E'}
+                {auctionStatus === 'active' ? 'ACTIVE' : auctionStatus === 'paused' ? 'EN PAUSE' : 'TERMINÉE'}
               </div>
             </div>
           </div>
@@ -463,7 +463,7 @@ export default function AdminPage() {
                   onClick={handleSignOut}
                   className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium text-sm transition-colors border border-red-200"
                 >
-                  Se dÃ©connecter
+                  Se déconnecter
                 </button>
               </div>
             </div>
@@ -472,7 +472,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-700">
-                    Connectez-vous pour accÃ©der au panneau d&apos;administration
+                    Connectez-vous pour accéder au panneau d&apos;administration
                   </p>
                 </div>
                 <button
@@ -514,14 +514,14 @@ export default function AdminPage() {
                   onClick={handleStartStream}
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
                 >
-                  ðŸŽ¥ DÃ©marrer la diffusion
+                  🎥 Démarrer la diffusion
                 </button>
               ) : (
                 <button
                   onClick={handleStopStream}
                   className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
                 >
-                  â¹ï¸ ArrÃªter la diffusion
+                  â¹ï¸ Arrêter la diffusion
                 </button>
               )}
             </div>
@@ -531,9 +531,9 @@ export default function AdminPage() {
           <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl shadow-xl p-6 flex flex-col">
             <div className="mb-6">
               <div className="text-xs text-gray-600 mb-1">Prix actuel</div>
-              <div className="text-4xl font-bold text-gray-800">{currentBid.amount} â‚¬</div>
+              <div className="text-4xl font-bold text-gray-800">{currentBid.amount} €</div>
               <div className="text-sm text-gray-600 mt-1">
-                {currentBid.bidder ? `par ${currentBid.bidder}` : "Pas d'enchÃ¨re"}
+                {currentBid.bidder ? `par ${currentBid.bidder}` : "Pas d'enchère"}
               </div>
             </div>
 
@@ -550,11 +550,11 @@ export default function AdminPage() {
                     onClick={handleCloseAuction}
                     className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors"
                   >
-                    ðŸ”’ ClÃ´turer la vente
+                    🔒 Clôturer la vente
                   </button>
                   {lastBidTime && (
                     <div className="text-xs text-gray-500 mt-2">
-                      DerniÃ¨re enchÃ¨re: {new Date(lastBidTime).toLocaleTimeString()}
+                      Dernière enchère: {new Date(lastBidTime).toLocaleTimeString()}
                     </div>
                   )}
                 </>
@@ -565,22 +565,22 @@ export default function AdminPage() {
                   onClick={handleResumeAuction}
                   className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors"
                 >
-                  â–¶ï¸ Reprendre
+                  ▶️ Reprendre
                 </button>
               )}
 
               {auctionStatus === 'ended' && (
                 <div className="text-center text-gray-600 text-sm">
-                  Vente terminÃ©e
+                  Vente terminée
                 </div>
               )}
             </div>
 
             <div className="mt-auto">
-              <div className="text-xs text-gray-600 mb-2">Historique rÃ©cent</div>
+              <div className="text-xs text-gray-600 mb-2">Historique récent</div>
               <div className="overflow-auto space-y-2" style={{ maxHeight: '200px' }}>
                 {bids.length === 0 && (
-                  <div className="text-sm text-gray-400">Aucune enchÃ¨re</div>
+                  <div className="text-sm text-gray-400">Aucune enchère</div>
                 )}
                 {bids
                   .slice(-10)
@@ -591,7 +591,7 @@ export default function AdminPage() {
                       className="bg-white rounded p-2 border border-gray-200"
                     >
                       <div className="text-sm font-medium text-gray-800">
-                        {b.bidder} â€” {b.amount} â‚¬
+                        {b.bidder} — {b.amount} €
                       </div>
                       <div className="text-xs text-gray-500">
                         {new Date(b.inserted_at).toLocaleTimeString()}
@@ -605,10 +605,10 @@ export default function AdminPage() {
 
         {/* Bids Feed */}
         <div className="mt-4 bg-white rounded-2xl shadow-xl p-6">
-          <h3 className="font-semibold text-lg mb-4">Toutes les enchÃ¨res</h3>
+          <h3 className="font-semibold text-lg mb-4">Toutes les enchères</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-96 overflow-auto">
             {bids.length === 0 && (
-              <div className="text-sm text-gray-400 col-span-full">Aucune enchÃ¨re enregistrÃ©e</div>
+              <div className="text-sm text-gray-400 col-span-full">Aucune enchère enregistrée</div>
             )}
             {bids.map((bid) => (
               <div
@@ -616,12 +616,12 @@ export default function AdminPage() {
                 className="rounded-lg p-3 border border-gray-200 hover:border-purple-400 transition-colors"
               >
                 <div className="text-xs text-gray-500 mb-1">
-                  {bid.bidder} â€¢{' '}
+                  {bid.bidder} •{' '}
                   <span className="text-[10px]">
                     {new Date(bid.inserted_at || Date.now()).toLocaleTimeString()}
                   </span>
                 </div>
-                <div className="text-lg font-bold text-purple-600">{bid.amount} â‚¬</div>
+                <div className="text-lg font-bold text-purple-600">{bid.amount} €</div>
               </div>
             ))}
           </div>
