@@ -16,6 +16,7 @@ interface ProfileData {
   additional_info: string
   phone_country_code: string
   phone_number: string
+  role: 'admin' | 'participant'
 }
 
 const countries = [
@@ -50,7 +51,8 @@ export default function ProfilePage() {
     profile: contextProfile,
     loading: authLoading, 
     signOut: authSignOut,
-    refreshProfile
+    refreshProfile,
+    refreshUser
   } = useAuth()
   const [saving, setSaving] = useState(false)
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
@@ -64,6 +66,7 @@ export default function ProfilePage() {
     additional_info: '',
     phone_country_code: '+33',
     phone_number: '',
+    role: 'participant',
   })
 
   async function loadProfile(userId: string) {
@@ -90,6 +93,7 @@ export default function ProfilePage() {
           additional_info: data.additional_info || '',
           phone_country_code: data.phone_country_code || '+33',
           phone_number: data.phone_number || '',
+          role: (data.role as 'admin' | 'participant') || 'participant',
         })
       }
     } catch (e) {
@@ -128,6 +132,7 @@ export default function ProfilePage() {
             additional_info: contextProfile.additional_info || '',
             phone_country_code: phoneCountryCode,
             phone_number: phoneNumber,
+            role: contextProfile.role || 'participant',
           })
           setIsAuthModalOpen(false)
         }
@@ -174,6 +179,7 @@ export default function ProfilePage() {
         additional_info: profileData.additional_info || null,
         phone_country_code: profileData.phone_country_code || '+33',
         phone_number: profileData.phone_number.replace(/\s/g, '') || null,
+        role: profileData.role || 'participant',
         updated_at: new Date().toISOString(),
       }
 
@@ -224,13 +230,14 @@ export default function ProfilePage() {
       }
 
       console.log('Profile: handleSubmit - Profile saved successfully:', data)
-      console.log('Profile: handleSubmit - Refreshing profile in context...')
+      console.log('Profile: handleSubmit - Refreshing profile and user in context...')
       
-      // RafraÃ®chir le profil dans le contexte
+      // RafraÃ®chir le profil et l'utilisateur dans le contexte pour mettre à jour le rôle
       await refreshProfile()
-      console.log('Profile: handleSubmit - Profile refreshed in context')
+      await refreshUser()
+      console.log('Profile: handleSubmit - Profile and user refreshed in context')
       
-      showSuccess('Profil mis Ã  jour avec succÃ¨s!')
+      showSuccess('Profil mis Ã  jour avec succÃ¨s!')
       console.log('Profile: handleSubmit - Success message shown')
     } catch (err: any) {
       console.error('Error saving profile:', err)
@@ -462,6 +469,29 @@ export default function ProfilePage() {
                   required
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Rôle */}
+          <div>
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Rôle</h2>
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                Rôle *
+              </label>
+              <select
+                id="role"
+                value={profileData.role}
+                onChange={(e) => handleInputChange('role', e.target.value as 'admin' | 'participant')}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none bg-white"
+                required
+              >
+                <option value="participant">Participant</option>
+                <option value="admin">Administrateur</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Le rôle administrateur vous donne accès au panneau de gestion des enchères.
+              </p>
             </div>
           </div>
 
