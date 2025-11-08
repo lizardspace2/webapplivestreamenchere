@@ -65,39 +65,6 @@ export default function ProfilePage() {
     phone_number: '',
   })
 
-  useEffect(() => {
-    async function loadUser() {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
-        if (user) {
-          await loadProfile(user.id)
-        } else {
-          setIsAuthModalOpen(true)
-        }
-      } catch (e) {
-        console.error('Failed to load user:', e)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        loadProfile(session.user.id)
-      } else {
-        setIsAuthModalOpen(true)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
   async function loadProfile(userId: string) {
     try {
       const { data, error } = await supabase
@@ -128,6 +95,75 @@ export default function ProfilePage() {
       console.error('Failed to load profile:', e)
     }
   }
+
+  useEffect(() => {
+    let mounted = true
+    let loadingTimeout: NodeJS.Timeout
+
+    // Timeout de sécurité : arrêter le chargement après 3 secondes maximum
+    loadingTimeout = setTimeout(() => {
+      if (mounted) {
+        console.log('Loading timeout reached in profile page')
+        setLoading(false)
+      }
+    }, 3000)
+
+    async function loadUser() {
+      try {
+        console.log('Loading user in profile page...')
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error) {
+          console.warn('Auth error in profile:', error)
+        }
+        
+        if (!mounted) return
+        
+        setUser(user)
+        if (user) {
+          console.log('User found, loading profile...', user.id)
+          try {
+            await loadProfile(user.id)
+          } catch (profileError) {
+            console.error('Error loading profile:', profileError)
+          }
+        } else {
+          console.log('No user, opening auth modal')
+          setIsAuthModalOpen(true)
+        }
+      } catch (e) {
+        console.error('Failed to load user:', e)
+      } finally {
+        if (mounted) {
+          clearTimeout(loadingTimeout)
+          setLoading(false)
+        }
+      }
+    }
+
+    loadUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!mounted) return
+      console.log('Auth state changed in profile:', _event)
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        try {
+          await loadProfile(session.user.id)
+        } catch (profileError) {
+          console.error('Error loading profile on auth change:', profileError)
+        }
+      } else {
+        setIsAuthModalOpen(true)
+      }
+    })
+
+    return () => {
+      mounted = false
+      clearTimeout(loadingTimeout)
+      subscription.unsubscribe()
+    }
+  }, [])
 
   function handleInputChange(field: keyof ProfileData, value: string) {
     setProfileData((prev) => ({ ...prev, [field]: value }))
