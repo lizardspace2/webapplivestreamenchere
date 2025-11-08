@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { LIVEPEER_CONFIG } from '@/lib/livepeer'
+import AuthModal from '@/app/components/AuthModal'
 import type { User } from '@supabase/supabase-js'
 import Hls from 'hls.js'
 
@@ -26,12 +27,9 @@ export default function LiveAuctionPage() {
   const [bidAmount, setBidAmount] = useState('')
   const [connected, setConnected] = useState(false)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(false)
   const [auctionEndsAt] = useState<Date | null>(null) // Set this to enable timer
   const [supabaseConfigured, setSupabaseConfigured] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
 
   const room = 'auction-room'
   const startingPrice = 10
@@ -226,39 +224,8 @@ export default function LiveAuctionPage() {
     }
   }
 
-  async function signIn(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) throw error
-      setEmail('')
-      setPassword('')
-      setIsSignUp(false)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Erreur de connexion')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function signUp(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.signUp({ email, password })
-      if (error) throw error
-      alert('Vérifiez votre e-mail pour confirmer votre compte.')
-      setEmail('')
-      setPassword('')
-      setIsSignUp(false)
-    } catch (err: any) {
-      console.error(err)
-      alert(err.message || 'Erreur d\'inscription')
-    } finally {
-      setLoading(false)
-    }
+  function handleAuthSuccess(authUser: User) {
+    setUser(authUser)
   }
 
   async function signOut() {
@@ -304,51 +271,41 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_supabase`}
 
           {/* Auth Section */}
           {user ? (
-            <div className="flex items-center justify-between bg-green-50 p-3 rounded-lg">
-              <div className="text-sm">
-                <span className="font-medium">Connecté:</span> {user.email}
+            <div className="flex items-center justify-between bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-semibold">
+                  {user.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-800">{user.email}</div>
+                  <div className="text-xs text-gray-500">Connecté</div>
+                </div>
               </div>
               <button
                 onClick={signOut}
-                className="text-red-600 text-sm hover:text-red-700 font-medium"
+                className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium text-sm transition-colors border border-red-200"
               >
                 Se déconnecter
               </button>
             </div>
           ) : (
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <form onSubmit={isSignUp ? signUp : signIn} className="flex flex-col sm:flex-row gap-2">
-                <input
-                  className="border border-gray-300 p-2 rounded flex-1"
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                <input
-                  className="border border-gray-300 p-2 rounded flex-1"
-                  type="password"
-                  placeholder="Mot de passe"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">
+                    Connectez-vous pour placer des enchères
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Créez un compte ou connectez-vous avec votre e-mail
+                  </p>
+                </div>
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 font-semibold text-sm transition-all transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
                 >
-                  {isSignUp ? 'S\'inscrire' : 'Connexion'}
+                  Se connecter
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(!isSignUp)}
-                  className="text-sm text-blue-600 hover:text-blue-700 underline"
-                >
-                  {isSignUp ? 'Déjà un compte ?' : 'Créer un compte'}
-                </button>
-              </form>
+              </div>
             </div>
           )}
         </div>
@@ -459,6 +416,13 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=votre_cle_anon_supabase`}
           </div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+      />
     </div>
   )
 }
