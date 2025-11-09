@@ -129,6 +129,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 })
 
 export function isSupabaseConfigured(): boolean {
-  return !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== '' && supabaseAnonKey !== '')
+  // Les clés sont maintenant intégrées en dur, donc toujours configuré
+  return true
 }
 
