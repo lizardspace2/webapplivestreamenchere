@@ -316,13 +316,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async function initAuth() {
       try {
         console.log('AuthContext: Initializing auth...')
+        console.log('AuthContext: Checking storage for session...')
         
         // Essayer d'abord de récupérer la session depuis le storage
-        // getSession() récupère la session depuis le stockage personnalisé (localStorage + cookies)
+        // getSession() récupère la session depuis le stockage personnalisé (localStorage + sessionStorage + cookies)
         // C'est la méthode recommandée pour récupérer une session persistée
         let { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
         console.log('AuthContext: Session from storage:', session ? 'found' : 'not found', session?.user?.email)
+        if (session) {
+          console.log('AuthContext: Session expires at:', session.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A')
+        }
         
         if (sessionError) {
           console.warn('AuthContext: Session error:', sessionError)
@@ -333,6 +337,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session && session.expires_at) {
           const expiresAt = new Date(session.expires_at * 1000)
           const now = new Date()
+          const timeUntilExpiry = expiresAt.getTime() - now.getTime()
+          console.log('AuthContext: Session expires in:', Math.round(timeUntilExpiry / 1000), 'seconds')
+          
           if (expiresAt < now) {
             console.log('AuthContext: Session expired, attempting refresh...')
             // Essayer de rafraîchir la session
@@ -343,6 +350,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } else {
               console.warn('AuthContext: Failed to refresh session:', refreshError)
               session = null
+            }
+          } else if (timeUntilExpiry < 60 * 60 * 1000) {
+            // Si la session expire dans moins d'une heure, la rafraîchir préventivement
+            console.log('AuthContext: Session expiring soon, refreshing preventively...')
+            const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+            if (!refreshError && refreshedSession) {
+              session = refreshedSession
+              console.log('AuthContext: Session refreshed preventively')
             }
           }
         }
