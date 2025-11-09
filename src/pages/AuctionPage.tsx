@@ -83,6 +83,15 @@ export default function AuctionPage() {
     }
   }, [user, isAdmin, navigate])
 
+  // Vérifier le profil complet quand l'utilisateur change
+  useEffect(() => {
+    if (user && isSupabaseConfigured()) {
+      checkProfileComplete(user.id)
+    } else {
+      setProfileComplete(false)
+    }
+  }, [user])
+
   // Supabase realtime subscriptions
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
@@ -201,8 +210,19 @@ export default function AuctionPage() {
 
   async function placeBid(e: React.FormEvent) {
     e.preventDefault()
+    e.stopPropagation()
+    
+    console.log('placeBid called', { user, auctionStatus, bidAmount, profileComplete })
+    
     if (!user) {
       showWarning('Veuillez vous connecter pour enchérir.')
+      setIsAuthModalOpen(true)
+      return
+    }
+
+    if (!profileComplete) {
+      showWarning('Veuillez compléter votre profil avant de pouvoir enchérir.')
+      setIsProfileModalOpen(true)
       return
     }
 
@@ -211,8 +231,13 @@ export default function AuctionPage() {
       return
     }
 
+    if (!isSupabaseConfigured()) {
+      showError('Supabase n\'est pas configuré. Veuillez configurer votre environnement.')
+      return
+    }
+
     const amount = Number(bidAmount)
-    if (!amount || Number.isNaN(amount)) {
+    if (!amount || Number.isNaN(amount) || amount <= 0) {
       showError('Montant invalide')
       return
     }
@@ -231,13 +256,21 @@ export default function AuctionPage() {
     }
 
     try {
-      const { error } = await supabase.from('bids').insert([bid])
-      if (error) throw error
+      console.log('Attempting to insert bid:', bid)
+      const { data, error } = await supabase.from('bids').insert([bid])
+      
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
+      
+      console.log('Bid inserted successfully:', data)
       setBidAmount('')
       showSuccess(`Enchère de ${amount} € placée avec succès!`)
     } catch (err: any) {
       console.error('Failed to insert bid', err)
-      showError(err.message || 'Impossible de placer l\'enchère, réessayez.')
+      const errorMessage = err?.message || err?.error_description || 'Impossible de placer l\'enchère, réessayez.'
+      showError(errorMessage)
     }
   }
 
@@ -406,7 +439,7 @@ export default function AuctionPage() {
               </div>
             </div>
 
-            <form onSubmit={placeBid} className="mt-auto">
+            <form onSubmit={placeBid} className="mt-auto" noValidate>
               <label className="text-sm font-medium text-gray-700 block mb-2">
                 Votre offre (min {computeMinAllowed(currentBid.amount, minIncrement)} €)
               </label>
@@ -423,12 +456,28 @@ export default function AuctionPage() {
                 />
                 <button
                   type="submit"
-                  disabled={!user || auctionStatus !== 'active'}
-                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                  disabled={!user || !profileComplete || auctionStatus !== 'active'}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
                 >
                   Enchérir
                 </button>
               </div>
+              {user && !profileComplete && (
+                <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  Complétez votre profil pour enchérir
+                </p>
+              )}
+              {!user && (
+                <p className="text-xs text-blue-600 mt-2 flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Connectez-vous pour enchérir
+                </p>
+              )}
             </form>
 
             <div className="mt-6">

@@ -312,12 +312,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         console.log('AuthContext: Initializing auth...')
         
-        // Attendre un peu pour que Supabase initialise complètement
-        // Cela permet au client de charger la session depuis localStorage
-        await new Promise(resolve => setTimeout(resolve, 100))
-        
         // Essayer d'abord de récupérer la session depuis le storage
-        // getSession() récupère la session depuis localStorage de manière synchrone
+        // getSession() récupère la session depuis le stockage personnalisé (localStorage + cookies)
         // C'est la méthode recommandée pour récupérer une session persistée
         let { data: { session }, error: sessionError } = await supabase.auth.getSession()
         
