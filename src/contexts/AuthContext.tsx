@@ -57,19 +57,94 @@ function isProfileComplete(profile: ProfileData | null): boolean {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [userRole, setUserRole] = useState<'admin' | 'participant' | null>(null)
-  const [profile, setProfile] = useState<ProfileData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [shouldShowAuth, setShouldShowAuth] = useState(false)
+  const [user, setUserState] = useState<User | null>(null)
+  const [userRole, setUserRoleState] = useState<'admin' | 'participant' | null>(null)
+  const [profile, setProfileState] = useState<ProfileData | null>(null)
+  const [loading, setLoadingState] = useState(true)
+  const [error, setErrorState] = useState<string | null>(null)
+  const [shouldShowAuth, setShouldShowAuthState] = useState(false)
+
+  // Wrappers pour logger les changements d'état
+  const setUser = useCallback((newUser: User | null) => {
+    setUserState((prevUser) => {
+      console.log('AuthContext: setUser - State change:', {
+        from: prevUser ? prevUser.id : 'null',
+        to: newUser ? newUser.id : 'null',
+        email: newUser?.email,
+      })
+      return newUser
+    })
+  }, [])
+
+  const setUserRole = useCallback((newRole: 'admin' | 'participant' | null) => {
+    setUserRoleState((prevRole) => {
+      console.log('AuthContext: setUserRole - State change:', {
+        from: prevRole,
+        to: newRole,
+      })
+      return newRole
+    })
+  }, [])
+
+  const setProfile = useCallback((newProfile: ProfileData | null) => {
+    setProfileState((prevProfile) => {
+      console.log('AuthContext: setProfile - State change:', {
+        from: prevProfile ? 'exists' : 'null',
+        to: newProfile ? 'exists' : 'null',
+        hasName: !!(newProfile?.first_name && newProfile?.last_name),
+      })
+      return newProfile
+    })
+  }, [])
+
+  const setLoading = useCallback((newLoading: boolean) => {
+    setLoadingState((prevLoading) => {
+      console.log('AuthContext: setLoading - State change:', {
+        from: prevLoading,
+        to: newLoading,
+      })
+      return newLoading
+    })
+  }, [])
+
+  const setError = useCallback((newError: string | null) => {
+    setErrorState((prevError) => {
+      console.log('AuthContext: setError - State change:', {
+        from: prevError,
+        to: newError,
+      })
+      return newError
+    })
+  }, [])
+
+  const setShouldShowAuth = useCallback((newShouldShow: boolean) => {
+    setShouldShowAuthState((prevShouldShow) => {
+      console.log('AuthContext: setShouldShowAuth - State change:', {
+        from: prevShouldShow,
+        to: newShouldShow,
+      })
+      return newShouldShow
+    })
+  }, [])
 
   // Calculer si le profil est complet
-  const profileComplete = useMemo(() => isProfileComplete(profile), [profile])
+  const profileComplete = useMemo(() => {
+    const complete = isProfileComplete(profile)
+    console.log('AuthContext: profileComplete - Recalculated:', complete, 'profile:', profile ? 'exists' : 'null')
+    return complete
+  }, [profile])
 
   // Helpers calculés
-  const isAdmin = useMemo(() => userRole === 'admin', [userRole])
-  const isAuthenticated = useMemo(() => !!user, [user])
+  const isAdmin = useMemo(() => {
+    const admin = userRole === 'admin'
+    console.log('AuthContext: isAdmin - Recalculated:', admin, 'userRole:', userRole)
+    return admin
+  }, [userRole])
+  const isAuthenticated = useMemo(() => {
+    const authenticated = !!user
+    console.log('AuthContext: isAuthenticated - Recalculated:', authenticated, 'user:', user ? user.id : 'null')
+    return authenticated
+  }, [user])
 
   // Charger le rôle de l'utilisateur
   const loadUserRole = useCallback(async (currentUser: User | null) => {
@@ -225,31 +300,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Rafraîchir l'utilisateur
   const refreshUser = useCallback(async () => {
+    console.log('AuthContext: refreshUser - Called')
     try {
+      console.log('AuthContext: refreshUser - Fetching user from Supabase...')
+      const startTime = Date.now()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
+      const fetchTime = Date.now() - startTime
+      console.log(`AuthContext: refreshUser - getUser completed in ${fetchTime}ms`)
       
       if (authError) {
-        console.error('Error refreshing user:', authError)
+        console.error('AuthContext: refreshUser - Error refreshing user:', {
+          code: authError.code,
+          message: authError.message,
+          name: authError.name,
+        })
+        console.log('AuthContext: refreshUser - Clearing user state due to error')
         setUser(null)
         setUserRole(null)
         setProfile(null)
         return
       }
 
+      console.log('AuthContext: refreshUser - User fetched:', user ? { id: user.id, email: user.email } : 'null')
       setUser(user)
+      console.log('AuthContext: refreshUser - User state updated')
       
       if (user) {
+        console.log('AuthContext: refreshUser - Loading role and profile in parallel for user:', user.id)
+        const parallelStartTime = Date.now()
         // Charger le rôle et le profil en parallèle
         await Promise.all([
           loadUserRole(user),
           loadProfile(user.id)
         ])
+        const parallelTime = Date.now() - parallelStartTime
+        console.log(`AuthContext: refreshUser - Parallel load completed in ${parallelTime}ms`)
       } else {
+        console.log('AuthContext: refreshUser - No user, clearing role and profile')
         setUserRole(null)
         setProfile(null)
       }
+      console.log('AuthContext: refreshUser - Completed successfully')
     } catch (error) {
-      console.error('Failed to refresh user:', error)
+      console.error('AuthContext: refreshUser - Exception:', error)
+      console.log('AuthContext: refreshUser - Clearing all state due to exception')
       setUser(null)
       setUserRole(null)
       setProfile(null)
@@ -274,23 +368,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Fonction pour exiger l'authentification
   const requireAuth = useCallback(() => {
+    console.log('AuthContext: requireAuth - Called, isAuthenticated:', isAuthenticated)
     if (!isAuthenticated) {
+      console.log('AuthContext: requireAuth - Not authenticated, showing auth modal')
       setShouldShowAuth(true)
       return false
     }
+    console.log('AuthContext: requireAuth - Authenticated, access granted')
     return true
   }, [isAuthenticated])
 
   // Fonction pour exiger les droits admin
   const requireAdmin = useCallback(() => {
+    console.log('AuthContext: requireAdmin - Called, isAuthenticated:', isAuthenticated, 'isAdmin:', isAdmin)
     if (!isAuthenticated) {
+      console.log('AuthContext: requireAdmin - Not authenticated, showing auth modal')
       setShouldShowAuth(true)
       return false
     }
     if (!isAdmin) {
+      console.warn('AuthContext: requireAdmin - User is authenticated but not admin')
       setError('Accès refusé : droits administrateur requis')
       return false
     }
+    console.log('AuthContext: requireAdmin - Admin access granted')
     return true
   }, [isAuthenticated, isAdmin])
 
@@ -485,15 +586,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Déconnexion
   const signOut = useCallback(async () => {
+    console.log('AuthContext: signOut - Called')
     try {
-      await supabase.auth.signOut()
+      console.log('AuthContext: signOut - Calling supabase.auth.signOut()...')
+      const startTime = Date.now()
+      const { error } = await supabase.auth.signOut()
+      const signOutTime = Date.now() - startTime
+      console.log(`AuthContext: signOut - signOut completed in ${signOutTime}ms`)
+      
+      if (error) {
+        console.error('AuthContext: signOut - Error during sign out:', error)
+        setError('Erreur lors de la déconnexion')
+        return
+      }
+      
+      console.log('AuthContext: signOut - Clearing all state')
       setUser(null)
       setUserRole(null)
       setProfile(null)
       setShouldShowAuth(false)
       setError(null)
+      console.log('AuthContext: signOut - Completed successfully')
     } catch (error) {
-      console.error('Failed to sign out:', error)
+      console.error('AuthContext: signOut - Exception:', error)
       setError('Erreur lors de la déconnexion')
     }
   }, [])
@@ -547,16 +662,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
+  console.log('AuthContext: useAuth - Hook called')
   const context = useContext(AuthContext)
   if (context === undefined) {
+    console.error('AuthContext: useAuth - Used outside AuthProvider!')
     throw new Error('useAuth must be used within an AuthProvider')
   }
+  console.log('AuthContext: useAuth - Context retrieved:', {
+    user: context.user ? context.user.id : 'null',
+    userRole: context.userRole,
+    isAuthenticated: context.isAuthenticated,
+    isAdmin: context.isAdmin,
+    loading: context.loading,
+  })
   return context
 }
 
 // Hook pour exiger l'authentification
 export function useRequireAuth() {
+  console.log('AuthContext: useRequireAuth - Hook called')
   const { isAuthenticated, requireAuth, loading } = useAuth()
+  console.log('AuthContext: useRequireAuth - Returning:', { isAuthenticated, loading })
   
   return {
     isAuthenticated,
@@ -567,7 +693,9 @@ export function useRequireAuth() {
 
 // Hook pour exiger les droits admin
 export function useRequireAdmin() {
+  console.log('AuthContext: useRequireAdmin - Hook called')
   const { isAdmin, isAuthenticated, requireAdmin, loading } = useAuth()
+  console.log('AuthContext: useRequireAdmin - Returning:', { isAdmin, isAuthenticated, loading })
   
   return {
     isAdmin,

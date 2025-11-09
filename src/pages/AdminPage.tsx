@@ -47,9 +47,15 @@ export default function AdminPage() {
 
   // Vérifier le rôle et rediriger si pas admin
   useEffect(() => {
+    console.log('AdminPage: useEffect admin check - user:', user ? user.id : 'null', 'isAdminUser:', isAdminUser, 'authLoading:', authLoading)
     if (!authLoading && user && !isAdminUser) {
+      console.log('AdminPage: User is not admin, redirecting to /auction')
       // Si l'utilisateur n'est pas admin, rediriger
       navigate('/auction')
+    } else if (!authLoading && !user) {
+      console.log('AdminPage: No user, staying on page (auth modal will show)')
+    } else if (!authLoading && user && isAdminUser) {
+      console.log('AdminPage: User is admin, access granted')
     }
   }, [user, isAdminUser, authLoading, navigate])
 
@@ -389,12 +395,16 @@ export default function AdminPage() {
   }
 
   async function handleSignOut() {
+    console.log('AdminPage: handleSignOut - Called')
     try {
+      console.log('AdminPage: handleSignOut - Stopping stream...')
       await handleStopStream()
+      console.log('AdminPage: handleSignOut - Calling signOut from context...')
       await authSignOut()
+      console.log('AdminPage: handleSignOut - Sign out successful, navigating to /auction')
       navigate('/auction')
     } catch (err) {
-      console.error(err)
+      console.error('AdminPage: handleSignOut - Error:', err)
     }
   }
 

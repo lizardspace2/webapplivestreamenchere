@@ -14,16 +14,21 @@ function AppComponents() {
   const navigate = useNavigate()
   const { shouldShowAuth, setShouldShowAuth, loading } = useAuth()
 
+  console.log('App: AppComponents - Render, shouldShowAuth:', shouldShowAuth, 'loading:', loading)
+
   // Modal d'authentification global
   if (loading || !shouldShowAuth) {
+    console.log('App: AppComponents - Not showing auth modal (loading or shouldShowAuth false)')
     return null
   }
 
+  console.log('App: AppComponents - Showing global auth modal')
   return (
     <AuthModal
       modalId="global-auth-modal"
       isOpen={shouldShowAuth}
       onClose={() => {
+        console.log('App: AppComponents - Closing global auth modal')
         setShouldShowAuth(false)
         navigate('/auction')
       }}
@@ -40,9 +45,26 @@ function AppRouter() {
   const location = useLocation()
   const { user, userRole, loading, shouldShowAuth, setShouldShowAuth } = useAuth()
 
+  console.log('App: AppRouter - Render, pathname:', location.pathname, {
+    user: user ? user.id : 'null',
+    userRole,
+    loading,
+    shouldShowAuth,
+  })
+
   // Gérer la redirection de la page d'accueil
   useEffect(() => {
-    if (loading) return
+    console.log('App: AppRouter - useEffect location change:', {
+      pathname: location.pathname,
+      loading,
+      user: user ? user.id : 'null',
+      userRole,
+    })
+
+    if (loading) {
+      console.log('App: AppRouter - Still loading, skipping redirect')
+      return
+    }
 
     // Si on est sur la page d'accueil, rediriger selon le rôle
     if (location.pathname === '/') {
@@ -51,9 +73,15 @@ function AppRouter() {
       if (user) {
         if (userRole === 'admin') {
           targetRoute = '/admin'
+          console.log('App: AppRouter - User is admin, redirecting to /admin')
+        } else {
+          console.log('App: AppRouter - User is participant, redirecting to /auction')
         }
+      } else {
+        console.log('App: AppRouter - No user, redirecting to /auction')
       }
       
+      console.log('App: AppRouter - Navigating to:', targetRoute)
       navigate(targetRoute, { replace: true })
     }
   }, [user, userRole, loading, navigate, location.pathname])

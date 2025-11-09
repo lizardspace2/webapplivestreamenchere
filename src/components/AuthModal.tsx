@@ -21,12 +21,16 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, modalId = 'a
 
   // Reset form when modal opens/closes
   useEffect(() => {
+    console.log('AuthModal: useEffect isOpen - Modal state changed:', isOpen)
     if (!isOpen) {
+      console.log('AuthModal: useEffect isOpen - Resetting form')
       setEmail('')
       setPassword('')
       setError(null)
       setSuccess(null)
       setIsSignUp(false)
+    } else {
+      console.log('AuthModal: useEffect isOpen - Modal opened')
     }
   }, [isOpen])
 
@@ -55,69 +59,124 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, modalId = 'a
 
   async function handleSignIn(e: FormEvent) {
     e.preventDefault()
+    console.log('AuthModal: handleSignIn - Called with email:', email)
     setError(null)
     setSuccess(null)
     setLoading(true)
 
     try {
+      console.log('AuthModal: handleSignIn - Calling supabase.auth.signInWithPassword...')
+      const startTime = Date.now()
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
+      const signInTime = Date.now() - startTime
+      console.log(`AuthModal: handleSignIn - signInWithPassword completed in ${signInTime}ms`)
 
-      if (signInError) throw signInError
+      if (signInError) {
+        console.error('AuthModal: handleSignIn - Sign in error:', {
+          code: signInError.code,
+          message: signInError.message,
+          name: signInError.name,
+        })
+        throw signInError
+      }
+
+      console.log('AuthModal: handleSignIn - Sign in response:', {
+        hasUser: !!data.user,
+        hasSession: !!data.session,
+        userEmail: data.user?.email,
+        sessionExpiresAt: data.session?.expires_at,
+      })
 
       if (data.user && data.session) {
-        console.log('AuthModal: Sign in successful, session saved:', data.session.user.email)
+        console.log('AuthModal: handleSignIn - Sign in successful, session saved:', data.session.user.email)
+        console.log('AuthModal: handleSignIn - Session expires at:', data.session.expires_at ? new Date(data.session.expires_at * 1000).toISOString() : 'N/A')
         // La session est automatiquement sauvegardée dans localStorage par Supabase
         // Rafraîchir l'utilisateur dans le contexte
+        console.log('AuthModal: handleSignIn - Refreshing user in context...')
+        const refreshStartTime = Date.now()
         await refreshUser()
+        const refreshTime = Date.now() - refreshStartTime
+        console.log(`AuthModal: handleSignIn - User refreshed in ${refreshTime}ms`)
         // Appeler le callback si fourni
         if (onAuthSuccess) {
+          console.log('AuthModal: handleSignIn - Calling onAuthSuccess callback')
           onAuthSuccess(data.user)
         }
+        console.log('AuthModal: handleSignIn - Closing modal')
         onClose()
       } else {
+        console.error('AuthModal: handleSignIn - No user or session in response')
         throw new Error('Connexion réussie mais pas de session')
       }
     } catch (err: any) {
-      console.error('AuthModal: Sign in error:', err)
-      setError(err.message || 'Erreur de connexion. Vérifiez vos identifiants.')
+      console.error('AuthModal: handleSignIn - Exception:', err)
+      const errorMessage = err.message || 'Erreur de connexion. Vérifiez vos identifiants.'
+      console.log('AuthModal: handleSignIn - Setting error:', errorMessage)
+      setError(errorMessage)
     } finally {
       setLoading(false)
+      console.log('AuthModal: handleSignIn - Completed')
     }
   }
 
   async function handleSignUp(e: FormEvent) {
     e.preventDefault()
+    console.log('AuthModal: handleSignUp - Called with email:', email)
     setError(null)
     setSuccess(null)
     setLoading(true)
 
     // Validation
     if (password.length < 6) {
+      console.warn('AuthModal: handleSignUp - Password too short:', password.length)
       setError('Le mot de passe doit contenir au moins 6 caractères.')
       setLoading(false)
       return
     }
 
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
+      console.log('AuthModal: handleSignUp - Calling supabase.auth.signUp...')
+      const startTime = Date.now()
+      const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
       })
+      const signUpTime = Date.now() - startTime
+      console.log(`AuthModal: handleSignUp - signUp completed in ${signUpTime}ms`)
 
-      if (signUpError) throw signUpError
+      if (signUpError) {
+        console.error('AuthModal: handleSignUp - Sign up error:', {
+          code: signUpError.code,
+          message: signUpError.message,
+          name: signUpError.name,
+        })
+        throw signUpError
+      }
 
+      console.log('AuthModal: handleSignUp - Sign up response:', {
+        hasUser: !!data.user,
+        hasSession: !!data.session,
+        userEmail: data.user?.email,
+      })
+
+      console.log('AuthModal: handleSignUp - Setting success message')
       setSuccess('Inscription réussie ! Vérifiez votre e-mail pour confirmer votre compte.')
       setTimeout(() => {
+        console.log('AuthModal: handleSignUp - Switching to sign in mode')
         setIsSignUp(false)
         setSuccess(null)
       }, 3000)
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'inscription. Veuillez réessayer.')
+      console.error('AuthModal: handleSignUp - Exception:', err)
+      const errorMessage = err.message || 'Erreur lors de l\'inscription. Veuillez réessayer.'
+      console.log('AuthModal: handleSignUp - Setting error:', errorMessage)
+      setError(errorMessage)
     } finally {
       setLoading(false)
+      console.log('AuthModal: handleSignUp - Completed')
     }
   }
 

@@ -306,11 +306,14 @@ export default function ProfilePage() {
   }
 
   async function handleSignOut() {
+    console.log('ProfilePage: handleSignOut - Called')
     try {
+      console.log('ProfilePage: handleSignOut - Calling signOut from context...')
       await authSignOut()
+      console.log('ProfilePage: handleSignOut - Sign out successful, navigating to /auction')
       navigate('/auction')
     } catch (err) {
-      console.error(err)
+      console.error('ProfilePage: handleSignOut - Error:', err)
     }
   }
 

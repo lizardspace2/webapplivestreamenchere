@@ -78,16 +78,21 @@ export default function AuctionPage() {
 
   // Rediriger si admin
   useEffect(() => {
+    console.log('AuctionPage: useEffect admin redirect - user:', user ? user.id : 'null', 'isAdmin:', isAdmin)
     if (user && isAdmin) {
+      console.log('AuctionPage: User is admin, redirecting to /admin')
       navigate('/admin')
     }
   }, [user, isAdmin, navigate])
 
   // Vérifier le profil complet quand l'utilisateur change
   useEffect(() => {
+    console.log('AuctionPage: useEffect profile check - user:', user ? user.id : 'null', 'supabaseConfigured:', isSupabaseConfigured())
     if (user && isSupabaseConfigured()) {
+      console.log('AuctionPage: Checking profile complete for user:', user.id)
       checkProfileComplete(user.id)
     } else {
+      console.log('AuctionPage: No user or Supabase not configured, setting profileComplete to false')
       setProfileComplete(false)
     }
   }, [user])
@@ -317,10 +322,13 @@ export default function AuctionPage() {
   }
 
   async function handleSignOut() {
+    console.log('AuctionPage: handleSignOut - Called')
     try {
+      console.log('AuctionPage: handleSignOut - Calling signOut from context...')
       await signOut()
+      console.log('AuctionPage: handleSignOut - Sign out successful')
     } catch (err) {
-      console.error(err)
+      console.error('AuctionPage: handleSignOut - Error:', err)
     }
   }
 
