@@ -105,9 +105,10 @@ export default function ProfilePage() {
   useEffect(() => {
     let mounted = true
     
-    if (user) {
+    if (user && !authLoading) {
       // Si le contexte a déjà un profil, l'utiliser
       if (contextProfile && mounted) {
+        console.log('ProfilePage: Using context profile:', contextProfile)
         // Utiliser directement phone_country_code du contexte s'il existe
         let phoneCountryCode = contextProfile.phone_country_code || '+33'
         let phoneNumber = contextProfile.phone_number || ''
@@ -137,11 +138,25 @@ export default function ProfilePage() {
           setIsAuthModalOpen(false)
         }
       } else if (mounted) {
-        // Sinon, charger depuis la base de données
-        loadProfile(user.id)
+        // Si pas de profil dans le contexte, essayer de le rafraîchir d'abord
+        if (!contextProfile) {
+          console.log('ProfilePage: No context profile, refreshing...')
+          refreshProfile().then(() => {
+            // Après le refresh, attendre un peu puis charger depuis la DB si toujours pas de profil
+            setTimeout(() => {
+              if (mounted && user) {
+                loadProfile(user.id)
+              }
+            }, 300)
+          })
+        } else {
+          // Sinon, charger directement depuis la base de données
+          console.log('ProfilePage: Loading profile from database for user:', user.id)
+          loadProfile(user.id)
+        }
         setIsAuthModalOpen(false)
       }
-    } else if (!authLoading && mounted) {
+    } else if (!authLoading && !user && mounted) {
       // Si le chargement est terminé et qu'il n'y a pas d'utilisateur, ouvrir le modal
       setIsAuthModalOpen(true)
     }
@@ -149,7 +164,7 @@ export default function ProfilePage() {
     return () => {
       mounted = false
     }
-  }, [user, contextProfile, authLoading])
+  }, [user, contextProfile, authLoading, refreshProfile])
 
   function handleInputChange(field: keyof ProfileData, value: string) {
     setProfileData((prev) => ({ ...prev, [field]: value }))
@@ -236,6 +251,13 @@ export default function ProfilePage() {
       await refreshProfile()
       await refreshUser()
       console.log('Profile: handleSubmit - Profile and user refreshed in context')
+      
+      // Attendre un peu pour que le contexte soit mis à jour, puis recharger le profil localement
+      await new Promise(resolve => setTimeout(resolve, 200))
+      if (user) {
+        console.log('Profile: handleSubmit - Reloading profile from database...')
+        await loadProfile(user.id)
+      }
       
       showSuccess('Profil mis à jour avec succès!')
       console.log('Profile: handleSubmit - Success message shown')

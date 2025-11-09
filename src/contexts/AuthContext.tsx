@@ -258,12 +258,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Rafraîchir uniquement le profil
   const refreshProfile = useCallback(async () => {
-    if (!user) return
+    if (!user) {
+      console.log('AuthContext: refreshProfile - No user, cannot refresh')
+      return
+    }
     
     try {
+      console.log('AuthContext: refreshProfile - Refreshing profile for user:', user.id)
       await loadProfile(user.id)
+      console.log('AuthContext: refreshProfile - Profile refreshed successfully')
     } catch (error) {
-      console.error('Failed to refresh profile:', error)
+      console.error('AuthContext: refreshProfile - Failed to refresh profile:', error)
     }
   }, [user, loadProfile])
 
@@ -373,12 +378,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('AuthContext: Starting parallel load of role and profile...')
           const parallelStartTime = Date.now()
           // Charger le rôle et le profil en parallèle pour de meilleures performances
-          await Promise.all([
-            loadUserRole(user),
-            loadProfile(user.id)
-          ])
-          const parallelTime = Date.now() - parallelStartTime
-          console.log(`AuthContext: Parallel load completed in ${parallelTime}ms`)
+          try {
+            await Promise.all([
+              loadUserRole(user),
+              loadProfile(user.id)
+            ])
+            const parallelTime = Date.now() - parallelStartTime
+            console.log(`AuthContext: Parallel load completed in ${parallelTime}ms`)
+            
+            // Vérifier que le profil a bien été chargé
+            if (mounted) {
+              // Attendre un peu pour que le state soit mis à jour
+              await new Promise(resolve => setTimeout(resolve, 100))
+              console.log('AuthContext: Profile loaded, checking state...')
+            }
+          } catch (error) {
+            console.error('AuthContext: Error loading user data:', error)
+          }
         } else {
           console.log('AuthContext: No user found')
           // Pas d'utilisateur, proposer la connexion
