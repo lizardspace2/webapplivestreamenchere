@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+// Clés Supabase intégrées en dur
+const supabaseUrl = 'https://teirnropztwqvoajskzw.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRlaXJucm9wenR3cXZvYWpza3p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2MDUzOTksImV4cCI6MjA3ODE4MTM5OX0.ZUgfafxt0MEoIWL-ifZFzsYpKJ3Dn-qvCM_Rau6qD4Q'
 
 // Stockage personnalisé robuste qui utilise localStorage comme stockage principal
 // et sauvegarde aussi dans sessionStorage comme backup
