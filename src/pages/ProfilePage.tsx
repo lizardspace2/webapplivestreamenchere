@@ -219,17 +219,20 @@ export default function ProfilePage() {
       console.log('Saving profile for user:', user.id)
       console.log('Profile data:', profileData)
       
+      // Clean phone number: remove all non-digit characters
+      const cleanPhoneNumber = profileData.phone_number.replace(/\D/g, '')
+      
       const profileToSave = {
         id: user.id,
-        first_name: profileData.first_name || null,
-        last_name: profileData.last_name || null,
-        address: profileData.address || null,
-        postal_code: profileData.postal_code || null,
-        city: profileData.city || null,
-        country: profileData.country || 'France',
-        additional_info: profileData.additional_info || null,
+        first_name: profileData.first_name?.trim() || null,
+        last_name: profileData.last_name?.trim() || null,
+        address: profileData.address?.trim() || null,
+        postal_code: profileData.postal_code?.trim() || null,
+        city: profileData.city?.trim() || null,
+        country: profileData.country?.trim() || 'France',
+        additional_info: profileData.additional_info?.trim() || null,
         phone_country_code: profileData.phone_country_code || '+33',
-        phone_number: profileData.phone_number.replace(/\s/g, '') || null,
+        phone_number: cleanPhoneNumber || null,
         role: profileData.role || 'participant',
         updated_at: new Date().toISOString(),
       }
@@ -524,7 +527,11 @@ export default function ProfilePage() {
                   id="phone_number"
                   type="tel"
                   value={profileData.phone_number}
-                  onChange={(e) => handleInputChange('phone_number', e.target.value.replace(/\D/g, ''))}
+                  onChange={(e) => {
+                    // Remove all non-digit characters but keep the value for display
+                    const cleaned = e.target.value.replace(/\D/g, '')
+                    handleInputChange('phone_number', cleaned)
+                  }}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none"
                   placeholder="612345678"
                   required

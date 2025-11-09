@@ -61,9 +61,77 @@ export default function ProfileModal({ isOpen, onClose, onComplete, user }: Prof
     phone_number: '',
   })
 
-  // Reset form when modal opens/closes
+  // Load existing profile data when modal opens
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen && user) {
+      // Load existing profile data
+      async function loadExistingProfile() {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single()
+
+          if (error && error.code !== 'PGRST116') {
+            // PGRST116 = not found, which is OK for new users
+            console.error('Error loading profile:', error)
+          }
+
+          if (data) {
+            // Extract phone country code if phone_number starts with +
+            let phoneCountryCode = data.phone_country_code || '+33'
+            let phoneNumber = data.phone_number || ''
+            
+            // Si le numéro commence par un code pays mais qu'on n'a pas phone_country_code, l'extraire
+            if (phoneNumber && phoneNumber.startsWith('+') && !data.phone_country_code) {
+              const match = phoneNumber.match(/^(\+\d{1,3})/)
+              if (match) {
+                phoneCountryCode = match[1]
+                phoneNumber = phoneNumber.substring(match[1].length).trim()
+              }
+            }
+
+            // Remove any non-digit characters from phone number for display
+            phoneNumber = phoneNumber.replace(/\D/g, '')
+
+            setCurrentStep(1) // Reset to first step when loading existing data
+            setError(null)
+            setProfileData({
+              first_name: data.first_name || '',
+              last_name: data.last_name || '',
+              address: data.address || '',
+              postal_code: data.postal_code || '',
+              city: data.city || '',
+              country: data.country || 'France',
+              additional_info: data.additional_info || '',
+              phone_country_code: phoneCountryCode,
+              phone_number: phoneNumber,
+            })
+          } else {
+            // Reset to defaults for new profile
+            setCurrentStep(1)
+            setError(null)
+            setProfileData({
+              first_name: '',
+              last_name: '',
+              address: '',
+              postal_code: '',
+              city: '',
+              country: 'France',
+              additional_info: '',
+              phone_country_code: '+33',
+              phone_number: '',
+            })
+          }
+        } catch (err) {
+          console.error('Error loading profile:', err)
+        }
+      }
+
+      loadExistingProfile()
+    } else if (!isOpen) {
+      // Reset form when modal closes
       setCurrentStep(1)
       setError(null)
       setProfileData({
@@ -78,7 +146,7 @@ export default function ProfileModal({ isOpen, onClose, onComplete, user }: Prof
         phone_number: '',
       })
     }
-  }, [isOpen])
+  }, [isOpen, user])
 
   // Close on Escape key (désactivé - le profil doit être complété)
   useEffect(() => {
@@ -147,11 +215,11 @@ export default function ProfileModal({ isOpen, onClose, onComplete, user }: Prof
         setError('Le numéro de téléphone est requis')
         return false
       }
-      // Validation basique du numéro de téléphone
-      const phoneRegex = /^[0-9]{9,15}$/
-      const cleanPhone = profileData.phone_number.replace(/\s/g, '')
+      // Validation basique du numéro de téléphone (sans le code pays)
+      const phoneRegex = /^[0-9]{8,15}$/
+      const cleanPhone = profileData.phone_number.replace(/\s/g, '').replace(/\D/g, '')
       if (!phoneRegex.test(cleanPhone)) {
-        setError('Le numéro de téléphone doit contenir entre 9 et 15 chiffres')
+        setError('Le numéro de téléphone doit contenir entre 8 et 15 chiffres (sans le code pays)')
         return false
       }
     }
@@ -181,12 +249,15 @@ export default function ProfileModal({ isOpen, onClose, onComplete, user }: Prof
     setError(null)
 
     try {
+      // Clean phone number: remove all non-digit characters
+      const cleanPhoneNumber = profileData.phone_number.replace(/\D/g, '')
+      
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert({
           id: user.id,
           ...profileData,
-          phone_number: profileData.phone_number.replace(/\s/g, ''),
+          phone_number: cleanPhoneNumber || null,
           updated_at: new Date().toISOString(),
         })
 
@@ -486,7 +557,11 @@ export default function ProfileModal({ isOpen, onClose, onComplete, user }: Prof
                       id="phone_number"
                       type="tel"
                       value={profileData.phone_number}
-                      onChange={(e) => handleInputChange('phone_number', e.target.value.replace(/\D/g, ''))}
+                      onChange={(e) => {
+                        // Remove all non-digit characters but keep the value for display
+                        const cleaned = e.target.value.replace(/\D/g, '')
+                        handleInputChange('phone_number', cleaned)
+                      }}
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all outline-none"
                       placeholder="612345678"
                       required
