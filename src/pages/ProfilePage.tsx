@@ -71,18 +71,50 @@ export default function ProfilePage() {
 
   async function loadProfile(userId: string) {
     try {
+      console.log('ProfilePage: loadProfile - Loading profile for user:', userId)
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single()
 
-      if (error && error.code !== 'PGRST116') {
-        console.warn('Error loading profile:', error)
+      if (error) {
+        console.error('ProfilePage: loadProfile - Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        })
+        
+        // Si le profil n'existe pas encore, c'est normal
+        if (error.code === 'PGRST116') {
+          console.log('ProfilePage: loadProfile - Profile not found (PGRST116), this is normal for new users')
+          return
+        }
+        
+        // Si erreur RLS, afficher un message d'erreur clair
+        if (error.code === '42501' || error.code === 'PGRST301' || 
+            error.message?.includes('permission') || 
+            error.message?.includes('policy') || 
+            error.message?.includes('RLS') || 
+            error.message?.includes('row-level security')) {
+          console.error('ProfilePage: loadProfile - RLS/permission error detected')
+          showError(
+            'Erreur de permissions RLS. ' +
+            'Veuillez exécuter le script supabase/fix_profiles_rls.sql dans votre dashboard Supabase ' +
+            'pour configurer les politiques de sécurité.'
+          )
+          return
+        }
+        
+        // Autres erreurs
+        console.warn('ProfilePage: loadProfile - Other error:', error)
+        showError(`Erreur lors du chargement du profil: ${error.message}`)
         return
       }
 
       if (data) {
+        console.log('ProfilePage: loadProfile - Profile data loaded:', data)
         setProfileData({
           first_name: data.first_name || '',
           last_name: data.last_name || '',
@@ -95,9 +127,13 @@ export default function ProfilePage() {
           phone_number: data.phone_number || '',
           role: (data.role as 'admin' | 'participant') || 'participant',
         })
+        console.log('ProfilePage: loadProfile - Profile data set in state')
+      } else {
+        console.log('ProfilePage: loadProfile - No data returned')
       }
     } catch (e) {
-      console.error('Failed to load profile:', e)
+      console.error('ProfilePage: loadProfile - Exception:', e)
+      showError('Erreur inattendue lors du chargement du profil')
     }
   }
 
